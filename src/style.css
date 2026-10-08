@@ -6,6 +6,8 @@
   --button-bg: rgba(15, 23, 42, 0.85);
   --button-fg: #f8fafc;
   --shadow: rgba(15, 23, 42, 0.2);
+  --accent: #2563eb;
+  --accent-light: #60a5fa;
 }
 
 html, body {
@@ -64,4 +66,158 @@ body.dark {
 
 #theme-toggle:hover {
   filter: brightness(1.08);
+}
+
+/* Driving Mode UI */
+#driving-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--panel);
+  border-top: 1px solid var(--panel-border);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+#speedometer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+#speedometer-label {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+#speedometer-value {
+  font-size: 4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-light);
+}
+
+#speedometer-unit {
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+
+#trip-computer {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.trip-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.trip-stat-label {
+  opacity: 0.6;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.trip-stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+#trip-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.trip-button {
+  flex: 1;
+  border: 1px solid var(--panel-border);
+  background: var(--button-bg);
+  color: var(--button-fg);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.trip-button:hover {
+  filter: brightness(1.1);
+}
+
+.trip-button:active {
+  transform: scale(0.98);
+}
+
+.trip-button.recording {
+  background: #dc2626;
+  border-color: #991b1b;
+}
+
+#gps-status {
+  position: absolute;
+  bottom: 50vh;
+  left: 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  font-size: 0.85rem;
+  z-index: 999;
+  min-width: 200px;
+  display: none;
+}
+
+#gps-status.visible {
+  display: block;
+}
+
+#gps-status.ready {
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+#gps-status.error {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+#speed-limit-control {
+  position: absolute;
+  top: 80px;
+  right: 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+#speed-limit-control label {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+#speed-limit-input {
+  width: 80px;
+  padding: 0.5rem;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--button-fg);
+  border-radius: 0.25rem;
+  font-size: 1rem;
 }
