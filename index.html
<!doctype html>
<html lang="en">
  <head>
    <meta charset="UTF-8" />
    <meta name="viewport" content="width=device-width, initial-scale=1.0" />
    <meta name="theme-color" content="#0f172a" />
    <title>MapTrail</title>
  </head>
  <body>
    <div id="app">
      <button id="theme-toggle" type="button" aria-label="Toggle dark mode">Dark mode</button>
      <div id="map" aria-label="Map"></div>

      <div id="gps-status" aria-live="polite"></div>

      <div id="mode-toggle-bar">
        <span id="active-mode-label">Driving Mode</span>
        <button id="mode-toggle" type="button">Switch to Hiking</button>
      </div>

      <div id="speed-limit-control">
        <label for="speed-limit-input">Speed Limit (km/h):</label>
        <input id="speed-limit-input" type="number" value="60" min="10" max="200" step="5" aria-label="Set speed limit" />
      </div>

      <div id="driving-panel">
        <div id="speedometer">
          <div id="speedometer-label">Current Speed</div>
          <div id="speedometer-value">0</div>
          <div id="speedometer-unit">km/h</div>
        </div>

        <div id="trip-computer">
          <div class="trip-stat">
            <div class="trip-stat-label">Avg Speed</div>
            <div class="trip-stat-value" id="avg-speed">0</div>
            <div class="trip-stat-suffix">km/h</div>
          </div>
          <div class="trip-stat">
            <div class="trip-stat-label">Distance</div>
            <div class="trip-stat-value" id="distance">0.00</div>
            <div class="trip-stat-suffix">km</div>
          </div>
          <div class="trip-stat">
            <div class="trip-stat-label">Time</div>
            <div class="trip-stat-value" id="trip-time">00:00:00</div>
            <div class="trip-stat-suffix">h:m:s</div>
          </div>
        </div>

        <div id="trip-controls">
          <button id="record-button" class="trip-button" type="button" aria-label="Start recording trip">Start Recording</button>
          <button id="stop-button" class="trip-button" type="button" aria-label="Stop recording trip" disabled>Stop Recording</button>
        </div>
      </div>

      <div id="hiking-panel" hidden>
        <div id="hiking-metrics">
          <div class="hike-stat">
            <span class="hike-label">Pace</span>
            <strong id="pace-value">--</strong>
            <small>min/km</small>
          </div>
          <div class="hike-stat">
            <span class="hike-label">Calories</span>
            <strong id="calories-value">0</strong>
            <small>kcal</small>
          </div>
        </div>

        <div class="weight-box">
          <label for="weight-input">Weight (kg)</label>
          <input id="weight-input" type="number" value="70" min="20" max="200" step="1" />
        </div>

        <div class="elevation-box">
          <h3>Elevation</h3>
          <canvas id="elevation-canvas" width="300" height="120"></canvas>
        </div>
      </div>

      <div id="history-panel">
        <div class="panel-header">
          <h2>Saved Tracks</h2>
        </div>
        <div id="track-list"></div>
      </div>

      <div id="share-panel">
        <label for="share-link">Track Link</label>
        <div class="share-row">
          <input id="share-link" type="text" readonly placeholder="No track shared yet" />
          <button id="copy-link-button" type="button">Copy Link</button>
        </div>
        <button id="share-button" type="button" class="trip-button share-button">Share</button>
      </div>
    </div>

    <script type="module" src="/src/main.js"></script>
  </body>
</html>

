@@ -1,0 +1,280 @@
+import './style.css';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import { initMap } from './map.js';
+import { GPSTracker } from './gpsTracker.js';
+import { DrivingMode } from './drivingMode.js';
+import { HikingMode } from './hikingMode.js';
+import {
+  listTracks,
+  deleteTrack,
+  saveCurrentTrackIntoHistory,
+  makeShareUrl,
+  clearTrackFromUrl,
+  loadInitialTrack
+} from './storage.js';
+
+const toggleButton = document.getElementById('theme-toggle');
+const recordButton = document.getElementById('record-button');
+const stopButton = document.getElementById('stop-button');
+const speedLimitInput = document.getElementById('speed-limit-input');
+const shareInput = document.getElementById('share-link');
+const shareButton = document.getElementById('share-button');
+const copyButton = document.getElementById('copy-link-button');
+const historyList = document.getElementById('track-list');
+const modeToggle = document.getElementById('mode-toggle');
+const hikingPanel = document.getElementById('hiking-panel');
+const drivingPanel = document.getElementById('driving-panel');
+const activeModeLabel = document.getElementById('active-mode-label');
+const paceValue = document.getElementById('pace-value');
+const caloriesValue = document.getElementById('calories-value');
+const elevationCanvas = document.getElementById('elevation-canvas');
+const weightInput = document.getElementById('weight-input');
+
+let map = null;
+let gpsTracker = null;
+let drivingMode = null;
+let hikingMode = null;
+let activeTrackLayer = null;
+let currentMode = 'driving';
+
+function applyTheme(isDark) {
+  document.body.classList.toggle('dark', isDark);
+  localStorage.setItem('maptrail-theme', isDark ? 'dark' : 'light');
+  toggleButton.textContent = isDark ? 'Light mode' : 'Dark mode';
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  const isDriving = mode === 'driving';
+  drivingPanel.hidden = !isDriving;
+  hikingPanel.hidden = isDriving;
+  activeModeLabel.textContent = isDriving ? 'Driving Mode' : 'Hiking Mode';
+  modeToggle.textContent = isDriving ? 'Switch to Hiking' : 'Switch to Driving';
+}
+
+function formatSeconds(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function renderTrackOnMap(points) {
+  if (!points || points.length < 2) return;
+
+  if (activeTrackLayer) {
+    map.removeLayer(activeTrackLayer);
+  }
+
+  const latLngs = points.map((point) => [point.lat, point.lng]);
+  activeTrackLayer = L.polyline(latLngs, {
+    color: '#f59e0b',
+    weight: 5,
+    opacity: 0.9
+  });
+
+  activeTrackLayer.addTo(map);
+  map.fitBounds(activeTrackLayer.getBounds(), { padding: [30, 30] });
+}
+
+async function renderTrackHistory() {
+  const tracks = await listTracks();
+  historyList.innerHTML = '';
+
+  if (!tracks.length) {
+    historyList.innerHTML = '<div class="history-empty">No saved tracks yet.</div>';
+    return;
+  }
+
+  tracks.forEach((track) => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+
+    const info = document.createElement('div');
+    info.className = 'history-info';
+    info.innerHTML = `
+      <strong>${track.title}</strong>
+      <span>${(track.distance / 1000).toFixed(2)} km · ${formatSeconds(track.duration)}</span>
+    `;
+
+    const actions = document.createElement('div');
+    actions.className = 'history-actions';
+
+    const viewBtn = document.createElement('button');
+    viewBtn.textContent = 'View';
+    viewBtn.addEventListener('click', () => renderTrackOnMap(track.points));
+
+    const shareBtn = document.createElement('button');
+    shareBtn.textContent = 'Share';
+    shareBtn.addEventListener('click', () => {
+      const url = makeShareUrl(track.polyline || '');
+      shareInput.value = url;
+      shareInput.focus();
+      shareInput.select();
+    });
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.addEventListener('click', async () => {
+      await deleteTrack(track.id);
+      renderTrackHistory();
+    });
+
+    actions.append(viewBtn, shareBtn, deleteBtn);
+    item.append(info, actions);
+    historyList.appendChild(item);
+  });
+}
+
+const savedTheme = localStorage.getItem('maptrail-theme');
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+applyTheme(savedTheme ? savedTheme === 'dark' : prefersDark);
+
+toggleButton.addEventListener('click', () => {
+  const isDark = !document.body.classList.contains('dark');
+  applyTheme(isDark);
+});
+
+modeToggle.addEventListener('click', () => {
+  setMode(currentMode === 'driving' ? 'hiking' : 'driving');
+});
+
+if (weightInput) {
+  weightInput.addEventListener('change', (event) => {
+    hikingMode.setWeight(Number(event.target.value) || 70);
+  });
+}
+
+map = initMap();
+
+const sharedTrack = await loadInitialTrack();
+if (sharedTrack) {
+  renderTrackOnMap(sharedTrack);
+}
+
+gpsTracker = new GPSTracker({
+  map,
+  onLocationUpdate: (data) => {
+    if (data.speed !== undefined) {
+      drivingMode.updateSpeedometer(data.speed);
+      if (currentMode === 'hiking') {
+        const pace = hikingMode.getPaceFromSpeed(data.speed);
+        paceValue.textContent = pace ? `${pace.toFixed(1)} min/km` : '—';
+      }
+    }
+
+    if (data.distance !== undefined) {
+      drivingMode.updateTripComputer(data);
+      const distanceKm = data.distance / 1000;
+      if (currentMode === 'hiking') {
+        caloriesValue.textContent = `${hikingMode.estimateCalories(distanceKm)} kcal`;
+      }
+    }
+
+    if (data.gpsReady !== undefined) {
+      updateGpsStatus(data.gpsReady);
+    }
+  },
+  onError: (error) => {
+    updateGpsStatus(false, error.message || 'Location unavailable');
+  }
+});
+
+drivingMode = new DrivingMode(map);
+drivingMode.init(gpsTracker);
+hikingMode = new HikingMode();
+
+recordButton.addEventListener('click', () => {
+  drivingMode.startRecording();
+  recordButton.disabled = true;
+  recordButton.classList.add('recording');
+  stopButton.disabled = false;
+  clearTrackFromUrl();
+});
+
+stopButton.addEventListener('click', async () => {
+  const track = drivingMode.stopRecording();
+  if (track && track.points && track.points.length) {
+    const distanceKm = track.distance / 1000;
+    const avgSpeedKmh = track.distance > 0 && track.duration > 0 ? (track.distance / 1000) / (track.duration / 3600) : 0;
+    const saved = await saveCurrentTrackIntoHistory({
+      points: track.points,
+      duration: track.duration,
+      distance: track.distance,
+      avgSpeed: avgSpeedKmh
+    });
+
+    const shareUrl = makeShareUrl(saved.polyline || '');
+    shareInput.value = shareUrl;
+    renderTrackOnMap(track.points);
+
+    if (currentMode === 'hiking') {
+      const elevationValues = await hikingMode.getElevationProfile(track.points);
+      hikingMode.renderElevationChart(elevationValues);
+      caloriesValue.textContent = `${hikingMode.estimateCalories(distanceKm)} kcal`;
+    }
+
+    await renderTrackHistory();
+  }
+
+  recordButton.disabled = false;
+  recordButton.classList.remove('recording');
+  stopButton.disabled = true;
+});
+
+speedLimitInput.addEventListener('change', (event) => {
+  drivingMode.setSpeedLimit(parseFloat(event.target.value) || 60);
+});
+
+shareButton.addEventListener('click', () => {
+  const shareUrl = shareInput.value || window.location.href;
+  if (navigator.share) {
+    navigator.share({
+      title: 'MapTrail Track',
+      text: 'Check out this MapTrail track',
+      url: shareUrl
+    }).catch(() => {});
+  } else {
+    shareInput.value = shareUrl;
+    shareInput.focus();
+    shareInput.select();
+  }
+});
+
+copyButton.addEventListener('click', async () => {
+  const shareUrl = shareInput.value || window.location.href;
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    copyButton.textContent = 'Copied';
+    setTimeout(() => (copyButton.textContent = 'Copy Link'), 1200);
+  } catch (error) {
+    shareInput.focus();
+    shareInput.select();
+  }
+});
+
+function updateGpsStatus(isReady, message = '') {
+  const statusEl = document.getElementById('gps-status');
+  if (isReady) {
+    statusEl.textContent = '✓ GPS Ready';
+    statusEl.classList.add('ready');
+    statusEl.classList.remove('error');
+  } else {
+    statusEl.textContent = `✗ GPS ${message || 'Acquiring...'}`;
+    statusEl.classList.remove('ready');
+    if (message) statusEl.classList.add('error');
+  }
+  statusEl.classList.add('visible');
+}
+
+const statusEl = document.getElementById('gps-status');
+statusEl.textContent = 'Acquiring GPS...';
+statusEl.classList.add('visible');
+
+renderTrackHistory();
+setMode('driving');
+if (elevationCanvas) {
+  elevationCanvas.width = 300;
+  elevationCanvas.height = 120;
+}

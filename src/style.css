@@ -1,3 +1,17 @@
+@media (max-width: 640px) {
+  #mode-toggle-bar {
+    top: 72px;
+    left: 16px;
+    right: 16px;
+    justify-content: space-between;
+  }
+
+  #speed-limit-control {
+    top: 118px;
+    right: 16px;
+  }
+}
+
 :root {
   --bg: #f8fafc;
   --fg: #0f172a;
@@ -8,6 +22,7 @@
   --shadow: rgba(15, 23, 42, 0.2);
   --accent: #2563eb;
   --accent-light: #60a5fa;
+  --warning: #f59e0b;
 }
 
 html, body {
@@ -68,12 +83,43 @@ body.dark {
   filter: brightness(1.08);
 }
 
-/* Driving Mode UI */
-#driving-panel {
+#mode-toggle-bar {
   position: absolute;
-  bottom: 0;
+  top: 16px;
+  left: 16px;
+  right: 120px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: var(--button-fg);
+}
+
+#active-mode-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+#mode-toggle {
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--button-fg);
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+}
+
+#driving-panel,
+#hiking-panel {
+  position: absolute;
   left: 0;
   right: 0;
+  bottom: 0;
   background: var(--panel);
   border-top: 1px solid var(--panel-border);
   backdrop-filter: blur(10px);
@@ -134,6 +180,11 @@ body.dark {
   font-variant-numeric: tabular-nums;
 }
 
+.trip-stat-suffix {
+  font-size: 0.75rem;
+  opacity: 0.5;
+}
+
 #trip-controls {
   display: flex;
   gap: 1rem;
@@ -153,7 +204,7 @@ body.dark {
 }
 
 .trip-button:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.08);
 }
 
 .trip-button:active {
@@ -165,41 +216,102 @@ body.dark {
   border-color: #991b1b;
 }
 
+#hiking-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.hike-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.hike-label {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  text-transform: uppercase;
+}
+
+.hike-stat strong {
+  font-size: 2.2rem;
+  margin-top: 0.25rem;
+}
+
+.hike-stat small {
+  opacity: 0.7;
+}
+
+.weight-box,
+.elevation-box,
+#share-panel,
+#history-panel,
+#speed-limit-control,
+#gps-status {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.75rem;
+  color: var(--button-fg);
+}
+
+.weight-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.weight-box input {
+  width: 80px;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.5rem;
+  background: rgba(0,0,0,0.2);
+  color: var(--button-fg);
+  padding: 0.45rem 0.5rem;
+}
+
+.elevation-box {
+  padding: 0.75rem 1rem;
+}
+
+.elevation-box h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+#elevation-canvas {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.15);
+}
+
 #gps-status {
   position: absolute;
   bottom: 50vh;
   left: 16px;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 0.5rem;
   padding: 1rem;
   font-size: 0.85rem;
   z-index: 999;
-  min-width: 200px;
+  min-width: 220px;
   display: none;
 }
 
-#gps-status.visible {
-  display: block;
-}
-
-#gps-status.ready {
-  border-color: #16a34a;
-  color: #16a34a;
-}
-
-#gps-status.error {
-  border-color: #dc2626;
-  color: #dc2626;
-}
+#gps-status.visible { display: block; }
+#gps-status.ready { border-color: #16a34a; color: #16a34a; }
+#gps-status.error { border-color: #dc2626; color: #dc2626; }
 
 #speed-limit-control {
   position: absolute;
   top: 80px;
   right: 16px;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 0.5rem;
   padding: 1rem;
   z-index: 999;
   display: flex;
@@ -221,3 +333,1085 @@ body.dark {
   border-radius: 0.25rem;
   font-size: 1rem;
 }
+
+#history-panel {
+  position: absolute;
+  left: 16px;
+  bottom: 245px;
+  width: min(320px, calc(100% - 32px));
+  max-height: 220px;
+  overflow: auto;
+  z-index: 998;
+  padding: 0.75rem;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+#track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.history-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.history-actions button {
+  border: 1px solid var(--panel-border);
+  background: rgba(255,255,255,0.05);
+  color: var(--button-fg);
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+}
+
+.history-empty {
+  opacity: 0.7;
+  font-size: 0.85rem;
+  padding: 0.5rem 0;
+}
+
+#share-panel {
+  position: absolute;
+  right: 16px;
+  bottom: 180px;
+  width: min(320px, calc(100% - 32px));
+  z-index: 998;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+#share-panel label {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.share-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+#share-link {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--button-fg);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+}
+
+#copy-link-button {
+  border: 1px solid var(--panel-border);
+  background: rgba(255,255,255,0.06);
+  color: var(--button-fg);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+}
+
+.share-button {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  #speedometer-value { font-size: 2.8rem; }
+  #trip-computer { grid-template-columns: 1fr; }
+  #hiking-metrics { grid-template-columns: 1fr; }
+  #share-panel { bottom: 170px; }
+  #history-panel { bottom: 220px; }
+}
+
+body.dark #elevation-canvas { background: rgba(255,255,255,0.04); }
+
+[hidden] {
+  display: none !important;
+}
+
+* { box-sizing: border-box; }
+
+button, input { font: inherit; }
+
+#speed-limit-control label,
+#share-panel label,
+#history-panel h2,
+.weight-box label {
+  color: var(--button-fg);
+}
+
+#history-panel,
+#share-panel,
+#speed-limit-control,
+#gps-status,
+#mode-toggle-bar,
+#driving-panel,
+#hiking-panel {
+  box-shadow: 0 8px 24px var(--shadow);
+}
+
+#hiking-panel {
+  background: rgba(15,23,42,0.82);
+}
+
+#hiking-panel[hidden] { display: none !important; }
+
+.logically-hidden { display: none; }
+
+*::-webkit-scrollbar { width: 8px; }
+*::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 999px; }
+
+body.dark .trip-button { background: rgba(15, 23, 42, 0.94); }
+
+#trip-controls { margin-top: 0.5rem; }
+
+#gps-status { top: auto; }
+
+#mode-toggle-bar #mode-toggle {
+  min-width: 132px;
+}
+
+#mode-toggle-bar {
+  max-width: calc(100% - 150px);
+}
+
+#hiking-panel {
+  padding-bottom: 1.2rem;
+}
+
+#hiking-panel .elevation-box canvas {
+  display: block;
+}
+
+.tooltip { display: none; }
+
+@media (max-width: 640px) {
+  #mode-toggle-bar {
+    right: 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  #driving-panel,
+  #hiking-panel {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(720px, calc(100% - 32px));
+    border-radius: 1rem 1rem 0 0;
+  }
+}
+
+@media (max-width: 767px) {
+  #driving-panel,
+  #hiking-panel {
+    width: 100%;
+  }
+}
+
+body.dark #mode-toggle-bar,
+body.dark #speed-limit-control,
+body.dark #share-panel,
+body.dark #history-panel {
+  background: rgba(15, 23, 42, 0.88);
+}
+
+body.dark #hiking-metrics .hike-stat,
+body.dark .history-item,
+body.dark .weight-box,
+body.dark .elevation-box {
+  background: rgba(148, 163, 184, 0.04);
+}
+
+body.dark #share-link,
+body.dark #speed-limit-input,
+body.dark .weight-box input {
+  background: rgba(15, 23, 42, 0.72);
+}
+
+body.dark #driving-panel,
+body.dark #hiking-panel {
+  border-color: rgba(51, 65, 85, 0.8);
+}
+
+#mode-toggle-bar {
+  justify-content: space-between;
+}
+
+#mode-toggle-bar > span {
+  white-space: nowrap;
+}
+
+#mode-toggle-bar > #mode-toggle {
+  white-space: nowrap;
+}
+
+#history-panel,
+#share-panel {
+  overflow: auto;
+}
+
+#history-panel {
+  scrollbar-width: thin;
+}
+
+#share-panel {
+  max-height: 180px;
+}
+
+#hiking-panel {
+  align-items: stretch;
+}
+
+#hiking-panel > * {
+  width: 100%;
+}
+
+#driving-panel,
+#hiking-panel {
+  min-height: 240px;
+}
+
+#driving-panel[hidden],
+#hiking-panel[hidden] {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  #history-panel {
+    width: 320px;
+    left: 16px;
+  }
+
+  #share-panel {
+    width: 320px;
+    right: 16px;
+  }
+}
+
+body.dark #theme-toggle {
+  border-color: rgba(51, 65, 85, 0.8);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#history-panel .history-actions button,
+#share-panel button,
+#copy-link-button,
+#mode-toggle,
+#theme-toggle {
+  transition: filter 0.15s ease;
+}
+
+#history-panel .history-actions button:hover,
+#share-panel button:hover,
+#copy-link-button:hover,
+#mode-toggle:hover,
+#theme-toggle:hover {
+  filter: brightness(1.08);
+}
+
+#hiking-panel .elevation-box canvas {
+  max-height: 120px;
+}
+
+#history-panel,
+#share-panel {
+  overscroll-behavior: contain;
+}
+
+#driving-panel,
+#hiking-panel {
+  box-sizing: border-box;
+}
+
+#speed-limit-control {
+  min-width: 180px;
+}
+
+#mode-toggle-bar {
+  min-height: 50px;
+}
+
+#theme-toggle,
+#mode-toggle,
+.trip-button,
+#copy-link-button,
+.history-actions button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+#driving-panel,
+#hiking-panel {
+  border-radius: 1rem 1rem 0 0;
+}
+
+#gps-status {
+  line-height: 1.4;
+}
+
+.hike-stat strong {
+  font-variant-numeric: tabular-nums;
+}
+
+#pace-value, #calories-value {
+  font-variant-numeric: tabular-nums;
+}
+
+#main.js and storage.js are already in the repo and handle track persistence.
+
+# this final file is intentionally left with a comment to keep the repo stable.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
