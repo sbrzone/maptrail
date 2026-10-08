@@ -1,0 +1,194 @@
+const DB_NAME = 'maptrail-db';
+const DB_VERSION = 1;
+const STORE_NAME = 'tracks';
+
+function getDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function saveTrack(trackData) {
+  const db = await getDb();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+
+  const payload = {
+    id: trackData.id || undefined,
+    title: trackData.title || `Trip ${new Date().toLocaleString()}`,
+    createdAt: trackData.createdAt || new Date().toISOString(),
+    duration: trackData.duration || 0,
+    distance: trackData.distance || 0,
+    points: Array.isArray(trackData.points) ? trackData.points : [],
+    polyline: trackData.polyline || '',
+    avgSpeed: trackData.avgSpeed || 0
+  };
+
+  return new Promise((resolve, reject) => {
+    const request = store.put(payload);
+    request.onsuccess = () => resolve({ ...payload, id: request.result || payload.id || null });
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function listTracks() {
+  const db = await getDb();
+  const tx = db.transaction(STORE_NAME, 'readonly');
+  const store = tx.objectStore(STORE_NAME);
+
+  return new Promise((resolve, reject) => {
+    const request = store.getAll();
+    request.onsuccess = () => {
+      const result = (request.result || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      resolve(result);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function deleteTrack(trackId) {
+  const db = await getDb();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+
+  return new Promise((resolve, reject) => {
+    const request = store.delete(trackId);
+    request.onsuccess = () => resolve(true);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export function encodePolyline(points) {
+  if (!Array.isArray(points) || points.length === 0) return '';
+
+  let encoded = '';
+  let prevLat = 0;
+  let prevLng = 0;
+
+  for (const point of points) {
+    const lat = Math.round(point.lat * 1e5);
+    const lng = Math.round(point.lng * 1e5);
+
+    encoded += encodeSegment(lat - prevLat);
+    encoded += encodeSegment(lng - prevLng);
+
+    prevLat = lat;
+    prevLng = lng;
+  }
+
+  return encoded;
+}
+
+function encodeSegment(value) {
+  let num = value << 1;
+  if (value < 0) {
+    num = (~num) + 1;
+  }
+
+  let result = '';
+  while (num >= 0x20) {
+    result += String.fromCharCode((0x20 | (num & 0x1f)) + 63);
+    num >>= 5;
+  }
+
+  result += String.fromCharCode(num + 63);
+  return result;
+}
+
+export function decodePolyline(encoded) {
+  if (!encoded) return [];
+
+  const points = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < encoded.length) {
+    let b;
+    let shift = 0;
+    let result = 0;
+
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+
+    const deltaLat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+    lat += deltaLat;
+
+    shift = 0;
+    result = 0;
+
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+
+    const deltaLng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+    lng += deltaLng;
+
+    points.push({
+      lat: lat / 1e5,
+      lng: lng / 1e5
+    });
+  }
+
+  return points;
+}
+
+export function getTrackFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const encoded = params.get('track');
+  if (!encoded) return null;
+  const points = decodePolyline(encoded);
+  if (!points.length) return null;
+  return points;
+}
+
+export function makeShareUrl(trackPolyline) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('track', trackPolyline);
+  return url.toString();
+}
+
+export function clearTrackFromUrl() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete('track');
+  window.history.replaceState({}, '', url.toString());
+}
+
+export async function loadInitialTrack() {
+  const sharedTrack = getTrackFromUrl();
+  if (sharedTrack) {
+    return sharedTrack;
+  }
+
+  const tracks = await listTracks();
+  return tracks[0]?.points || null;
+}
+
+export async function saveCurrentTrackIntoHistory(record) {
+  const polyline = encodePolyline(record.points);
+  const saved = await saveTrack({
+    title: `Trip ${new Date().toLocaleDateString()}`,
+    createdAt: new Date().toISOString(),
+    duration: record.duration,
+    distance: record.distance,
+    points: record.points,
+    polyline,
+    avgSpeed: record.avgSpeed || 0
+  });
+  return saved;
+}
